@@ -1207,3 +1207,148 @@ body {
   color: #ea580c;
 }
 
+/* ============================================================
+   SYNQ LOGO & TOP-LEFT BRAND BADGE
+============================================================ */
+
+/* Floating Top-Left Badge */
+.top-brand-badge {
+  position: fixed;
+  top: 18px;
+  left: 20px;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 6px 14px 6px 8px;
+  box-shadow: 0 4px 0 var(--color-border), 0 6px 16px rgba(26, 0, 48, 0.08);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  animation: logo-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.top-brand-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--color-border), 0 10px 20px rgba(26, 0, 48, 0.12);
+  background: #ffffff;
+}
+
+.top-brand-badge:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-border);
+}
+
+@keyframes logo-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Synq Logo Container */
+.synq-logo-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.synq-logo-svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+}
+
+/* Synq Typography */
+.synq-brand-text {
+  font-family: var(--font);
+  font-weight: 900;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #FF6B00 0%, #FF3CAC 50%, #7B2FBE 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.synq-text--sm {
+  font-size: 0.95rem;
+}
+
+.synq-text--md {
+  font-size: 1.25rem;
+}
+
+.synq-text--lg {
+  font-size: 1.75rem;
+}
+
+/* Header Integration */
+.header-left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease;
+}
+
+.header-brand-icon:hover {
+  transform: scale(1.08);
+}
+
+/* Dots micro-animation */
+.synq-dot {
+  transform-origin: center;
+  animation: dot-float 2.4s ease-in-out infinite alternate;
+}
+
+.synq-dot-1 { animation-delay: 0s; }
+.synq-dot-2 { animation-delay: 0.2s; }
+.synq-dot-3 { animation-delay: 0.4s; }
+.synq-dot-4 { animation-delay: 0.6s; }
+.synq-dot-5 { animation-delay: 0.8s; }
+.synq-dot-6 { animation-delay: 1.0s; }
+.synq-dot-7 { animation-delay: 1.2s; }
+
+@keyframes dot-float {
+  0% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-2.5px) scale(1.12);
+    opacity: 1;
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .top-brand-badge {
+    top: 12px;
+    left: 12px;
+    padding: 4px 10px 4px 6px;
+  }
+  .synq-text--sm {
+    font-size: 0.85rem;
+  }
+}
+
+

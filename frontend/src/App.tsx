@@ -3,6 +3,7 @@ import { Home } from './pages/Home';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { Result } from './pages/Result';
+import { TopBrandBadge } from './components/TopBrandBadge';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
 
 export default function App() {
@@ -35,6 +36,10 @@ export default function App() {
 
   return (
     <>
+      {screen !== 'GAME' && (
+        <TopBrandBadge onClick={screen !== 'HOME' ? goHome : undefined} />
+      )}
+
       {screen === 'HOME' && (
         <Home
           onEnterLobby={handleEnterLobby}
