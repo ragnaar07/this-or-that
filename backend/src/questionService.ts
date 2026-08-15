@@ -16,28 +16,38 @@ import {
 } from './types';
 import { getFallbackQuestion, getRoundTypeForRound } from './fallbackQuestions';
 
-const QUESTION_SYSTEM_PROMPT = `You are creating questions for THIS ⚡ THAT, a multiplayer social game primarily designed for a broad Indian audience.
+const QUESTION_SYSTEM_PROMPT = `You are the viral question design engine for THIS ⚡ THAT, a multiplayer social game designed for a broad Indian audience (Metros, Tier-2, Tier-3 cities across North, South, East, West).
 
-The audience includes people from metros, tier-2 cities, tier-3 cities and diverse regions of India.
-India is culturally, linguistically, economically and regionally diverse.
-Do not assume one Indian culture.
+CORE PRINCIPLE: QUESTION QUALITY > QUANTITY.
+Every question must make players think: "Bro, this is actually difficult 😂" or "Wait... what will they pick?!".
+Avoid boring generic word pairs like "Tea or coffee?" or "Beach or mountains?".
+Instead, ALWAYS create relatable SITUATIONS & DILEMMAS where both choices are tempting!
 
-Create a dynamic mixture of:
-Indian everyday life, food, Bollywood, regional cinema, OTT, music, cricket, memes, internet culture, friendship, social behaviour, family situations, travel, money/lifestyle, career, technology, childhood nostalgia, crazy scenarios, imagination, moral dilemmas, shopping, festivals, college, hostel, office life.
+CATEGORIES TO DYNAMICALLY MIX:
+1. Food & Chai (comfort food vs fancy dining, late-night Swiggy, biryani vs pizza, street food rules)
+2. Indian Everyday Life (late friend with chai, 5 min rule, UPI processing panic, family functions)
+3. Bollywood & Regional Cinema (family movie pick, biopic comedy vs drama, theatre front row vs middle)
+4. Cricket & Sports (last over stress, match banter, stadium vs sofa)
+5. Public Life & Culture (hosting podcast with Modi vs Rahul Gandhi, watching interview vs skipping to viral clips, asking leader non-political questions)
+6. Digital & Memes (3-min voice note vs "text kar", 2 AM meme replies, Instagram reels spiral)
+7. Money & Career (₹10k unexpected bonus, 60-hr work vs 4-day week, startup risk vs 9-to-5)
+8. Friendship & Relationships (best friend moving away, crush reply delay, splitting bills)
+9. Crazy & Superpowers (superpower only in India, ₹10 crore with 1% battery, deleting traffic vs spam calls)
+10. Childhood Nostalgia (school half-day, summer vacation memories)
 
-Questions should feel natural, modern, funny and conversational.
-Do not make the game feel like an exam.
-Do not require obscure factual knowledge.
-Questions should focus primarily on preferences and choices.
-Every question must have exactly two clear options.
-Do not repeatedly use the same topic.
-Do not generate five questions about food in a row.
-Do not stereotype Indians.
-Avoid sensitive personal attributes.
-
-The game should alternate between: easy, funny, cultural, unexpected, chaotic, revealing so that the player experience constantly changes.
-Each option MUST be short (1–4 words max), punchy, and instantly understandable.
-Return ONLY valid JSON: {"category": "...", "optionA": "...", "optionB": "..."}`;
+RULES:
+- Both options MUST be genuinely tempting and create playful disagreement.
+- Keep options punchy, short (1-5 words max).
+- Include a 1-sentence situational context in "scenario" (e.g. "Your friend arrives 45 mins late with chai:").
+- Never ask divisive political loyalty questions ("who is better leader?"). Keep public figures strictly playful.
+- Return valid JSON ONLY:
+{
+  "category": "...",
+  "subcategory": "...",
+  "scenario": "...",
+  "optionA": "...",
+  "optionB": "..."
+}`;
 
 function extractJson(text: string): any {
   let cleaned = text.trim();
@@ -60,36 +70,40 @@ const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
 async function generateQuestionWithGemini(
   apiKey: string,
   recentQuestions: string[],
+  recentCategories: string[] = [],
   roundNumber = 1,
   roundType: RoundType = 'NORMAL',
   gameMode = 'RANDOM'
 ): Promise<Question> {
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  let themeGuidance = 'Dynamic Indian culture or everyday habit';
+  let themeGuidance = 'Dynamic Indian cultural dilemma or situational quirk';
   if (roundType === 'CHAOS') {
-    themeGuidance = 'Absurd, crazy dilemmas or unexpected superpowers (e.g. 10 crore no internet, teleportation)';
+    themeGuidance = 'Absurd, crazy superpower dilemmas or high-stakes deals (e.g. ₹10 crore with 1% battery, teleportation vs pausing traffic)';
   } else if (roundType === 'PREDICTION') {
-    themeGuidance = 'Revealing social quirks, digital habits (WhatsApp/UPI), or friendship dilemmas where guessing is fun';
+    themeGuidance = 'Revealing social quirks, digital habits (WhatsApp/UPI/Crushes), or friendship dilemmas where guessing opponent choice is hilarious';
   } else if (roundType === 'DOUBLE_POINTS') {
-    themeGuidance = 'High-stakes lifestyle, money choices, or core priorities';
+    themeGuidance = 'High-stakes lifestyle, career vs freedom choices, or core relationship dilemmas';
   } else if (gameMode === 'FOOD') {
-    themeGuidance = 'Indian street food, sweets, regional dishes, chai/coffee habits';
+    themeGuidance = 'Indian street food, sweets, regional breakfast, late-night chai/Maggi dilemmas';
   } else if (gameMode === 'ENTERTAINMENT') {
-    themeGuidance = 'Bollywood, regional cinema, OTT, cricket, music, memes';
+    themeGuidance = 'Bollywood, regional cinema, cricket thrillers, viral memes, music vibes';
   } else if (roundNumber <= 4) {
-    themeGuidance = 'Low-pressure, funny everyday warm-up';
+    themeGuidance = 'Low-pressure, relatable Indian everyday situational warm-up';
   }
 
   const recentList = recentQuestions.slice(-15).join(', ');
-  const prompt = `Generate one fun India-first "this or that" choice pair.
+  const recentCatList = recentCategories.slice(-3).join(', ');
+
+  const prompt = `Generate one high-quality, situational India-first choice pair.
 Round number: ${roundNumber} of 20.
 Round Type: ${roundType}.
 Theme focus: ${themeGuidance}.
 Mode: ${gameMode}.
-Keep each option short (1-4 words max).
-Recently used (do NOT repeat): ${recentList || 'none yet'}.
-Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
+Recently used categories (avoid repeating last): ${recentCatList || 'none'}.
+Recently used choices (do NOT repeat): ${recentList || 'none yet'}.
+Return JSON only:
+{"category":"...","subcategory":"...","scenario":"...","optionA":"...","optionB":"..."}`;
 
   for (const modelName of GEMINI_MODELS) {
     try {
@@ -97,7 +111,7 @@ Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
         model: modelName,
         generationConfig: {
           temperature: 0.95,
-          maxOutputTokens: 400,
+          maxOutputTokens: 450,
         },
         systemInstruction: QUESTION_SYSTEM_PROMPT,
       });
@@ -115,6 +129,8 @@ Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
       ) {
         return {
           category: parsed.category.trim(),
+          subcategory: parsed.subcategory?.trim(),
+          scenario: parsed.scenario?.trim(),
           optionA: parsed.optionA.trim(),
           optionB: parsed.optionB.trim(),
           roundType,
@@ -130,6 +146,7 @@ Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
 
 export async function generateQuestion(
   recentQuestions: string[],
+  recentCategories: string[] = [],
   roundNumber = 1,
   roundType?: RoundType,
   gameMode = 'RANDOM'
@@ -142,6 +159,7 @@ export async function generateQuestion(
       const q = await generateQuestionWithGemini(
         geminiKey,
         recentQuestions,
+        recentCategories,
         roundNumber,
         targetRoundType,
         gameMode
@@ -152,7 +170,7 @@ export async function generateQuestion(
     }
   }
 
-  return getFallbackQuestion(recentQuestions, roundNumber, targetRoundType, gameMode);
+  return getFallbackQuestion(recentQuestions, recentCategories, roundNumber, targetRoundType, gameMode);
 }
 
 // ============================================================

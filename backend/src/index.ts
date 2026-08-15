@@ -120,6 +120,7 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       lastGuestChoice: null,
       lastLiveReaction: null,
       recentQuestions: [],
+      recentCategories: [],
       history: [],
       finalReport: null,
       gameMode,
@@ -172,7 +173,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
 
     // Round 1 Setup
     const roundType = getRoundTypeForRound(1);
-    const question = await generateQuestion(room.recentQuestions, 1, roundType, room.gameMode);
+    const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], 1, roundType, room.gameMode);
     const now = Date.now();
 
     const updatedRoom: Room = {
@@ -187,6 +188,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       roundStartedAt: now,
       roundDeadline: now + ROUND_DURATION_MS,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
+      recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
       updatedAt: now,
     };
 
@@ -375,7 +377,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
 
     const nextRound = room.roundNumber + 1;
     const nextRoundType = getRoundTypeForRound(nextRound);
-    const question = await generateQuestion(room.recentQuestions, nextRound, nextRoundType, room.gameMode);
+    const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], nextRound, nextRoundType, room.gameMode);
     const now = Date.now();
 
     clearRoundAnswers(code, room.roundNumber);
@@ -389,6 +391,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       roundStartedAt: now,
       roundDeadline: now + ROUND_DURATION_MS,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
+      recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
       updatedAt: now,
     };
 

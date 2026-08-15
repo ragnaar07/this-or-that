@@ -263,9 +263,20 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               {q.category && (
                 <div className="question-category">{q.category}</div>
               )}
-              <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
-                {promptText}
-              </div>
+
+              {/* Situational Scenario / Premise */}
+              {q.scenario ? (
+                <div className="question-scenario-card">
+                  <div className="question-scenario-text">{q.scenario}</div>
+                  <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
+                    {hasAnswered ? 'LOCKED 🔒' : promptText}
+                  </div>
+                </div>
+              ) : (
+                <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
+                  {hasAnswered ? 'LOCKED 🔒' : promptText}
+                </div>
+              )}
             </div>
 
             {/* Option buttons */}

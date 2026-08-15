@@ -2,13 +2,19 @@
 // Client-side game types — mirrors server V4 types
 // ============================================================
 
-export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS';
+export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'WILDCARD';
 
 export interface Question {
+  id?: string;
   category: string;
+  subcategory?: string;
+  difficulty?: number;
+  scenario?: string;
+  question?: string;
   optionA: string;
   optionB: string;
   roundType?: RoundType;
+  tags?: string[];
 }
 
 export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'FINISHED' | 'INTERRUPTED';
@@ -18,6 +24,7 @@ export type PlayerRole = 'host' | 'guest';
 export interface RoundHistoryItem {
   roundNumber: number;
   question: string;
+  scenario?: string;
   category: string;
   optionA: string;
   optionB: string;

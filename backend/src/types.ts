@@ -1,15 +1,20 @@
 // ============================================================
-// Game Types — shared between all server modules (V4 Ultimate)
+// Game Types — shared between all server modules (V4.1 Viral Engine)
 // ============================================================
 
-export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS';
+export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'WILDCARD';
 
 export interface Question {
   id?: string;
   category: string;
+  subcategory?: string;
+  difficulty?: 1 | 2 | 3 | 4;
+  scenario?: string;
+  question?: string;
   optionA: string;
   optionB: string;
   roundType?: RoundType;
+  tags?: string[];
 }
 
 export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'FINISHED' | 'INTERRUPTED';
@@ -17,6 +22,7 @@ export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'FINISHED' | 'INT
 export interface RoundHistoryItem {
   roundNumber: number;
   question: string;
+  scenario?: string;
   category: string;
   optionA: string;
   optionB: string;
@@ -115,6 +121,7 @@ export interface Room {
   lastGuestPredictionResult?: 'CORRECT' | 'WRONG' | null;
   lastLiveReaction?: string | null;
   recentQuestions: string[];
+  recentCategories: string[];
   history: RoundHistoryItem[];
   finalReport: FinalReport | null;
   interruptedReason?: string;
