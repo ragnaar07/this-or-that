@@ -25,18 +25,29 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
   // Reset choice when round changes
   useEffect(() => {
     if (room.roundNumber !== lastRoundNumber) {
+      console.log(`[GAME] Round changed from ${lastRoundNumber} to ${room.roundNumber}`);
       setMyChoice(null);
       setLastRoundNumber(room.roundNumber);
       nextRoundRequested.current = false;
     }
   }, [room.roundNumber, lastRoundNumber]);
 
-  // Polling — 700ms for near-realtime feel
+  // Polling — 700ms sequential polling for near-realtime feel
   const pollRoom = useCallback(async () => {
     if (isLeaving) return;
-    const res = await api.pollRoom(session.roomCode, session.playerId);
-    if (res.room) {
-      setRoom(res.room);
+    try {
+      const res = await api.pollRoom(session.roomCode, session.playerId);
+      if (res.room) {
+        setRoom((prev) => {
+          // Avoid overwriting newer local state with older poll response
+          if (!prev || res.room!.updatedAt >= prev.updatedAt) {
+            return res.room!;
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.warn('[GAME] Poll error:', err);
     }
   }, [session.roomCode, session.playerId, isLeaving]);
 
@@ -51,11 +62,19 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
       !isLeaving
     ) {
       nextRoundRequested.current = true;
+      console.log(`[GAME:HOST] Round ${room.roundNumber} reveal active. Advancing in 2.3s...`);
 
       const timer = setTimeout(async () => {
-        const res = await api.nextRound(session.roomCode, session.playerId);
-        if (res.room) setRoom(res.room);
-      }, 2300); // Slightly over 2.2s to ensure reveal fully displays
+        try {
+          const res = await api.nextRound(session.roomCode, session.playerId);
+          if (res.room) {
+            setRoom(res.room);
+          }
+        } catch (err) {
+          console.error('[GAME:HOST] Failed to advance round:', err);
+          nextRoundRequested.current = false; // Allow retry if failed
+        }
+      }, 2300);
 
       return () => clearTimeout(timer);
     }
@@ -66,20 +85,42 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
 
     // Optimistic local update
     setMyChoice(choice);
+    console.log(`[GAME] Selected: "${choice}" for round ${room.roundNumber}`);
 
-    await api.submitAnswer(
-      session.roomCode,
-      session.playerId,
-      session.role,
-      room.roundNumber,
-      choice
-    );
+    try {
+      const res = await api.submitAnswer(
+        session.roomCode,
+        session.playerId,
+        session.role,
+        room.roundNumber,
+        choice
+      );
+
+      if (res.error) {
+        console.warn(`[GAME] Submit answer response notice:`, res.error);
+      }
+
+      // If response has updated room state (e.g. triggered immediate REVEAL), apply immediately!
+      if (res.room) {
+        setRoom((prev) => {
+          if (!prev || res.room!.updatedAt >= prev.updatedAt) {
+            return res.room!;
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.error('[GAME] Network error on answer submit:', err);
+    }
   }
 
   async function handleLeave() {
     setIsLeaving(true);
-    await api.leaveRoom(session.roomCode, session.playerId);
-    onLeave();
+    try {
+      await api.leaveRoom(session.roomCode, session.playerId);
+    } finally {
+      onLeave();
+    }
   }
 
   const q = room.currentQuestion;

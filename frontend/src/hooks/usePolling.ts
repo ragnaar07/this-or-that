@@ -1,12 +1,12 @@
 // ============================================================
-// usePolling — polls a function at a given interval
-// Cleans up automatically on unmount or when active=false
+// usePolling — robust, non-overlapping polling hook
+// Prevents out-of-order responses and network congestion
 // ============================================================
 
 import { useEffect, useRef } from 'react';
 
 export function usePolling(
-  fn: () => void | Promise<void>,
+  fn: () => Promise<void> | void,
   intervalMs: number,
   active: boolean
 ) {
@@ -16,13 +16,32 @@ export function usePolling(
   useEffect(() => {
     if (!active) return;
 
-    // Poll immediately on activation
-    fnRef.current();
+    let isMounted = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isExecuting = false;
 
-    const id = setInterval(() => {
-      fnRef.current();
-    }, intervalMs);
+    async function poll() {
+      if (!isMounted || !active || isExecuting) return;
+      isExecuting = true;
 
-    return () => clearInterval(id);
+      try {
+        await fnRef.current();
+      } catch (err) {
+        console.warn('[usePolling] Poll error:', err);
+      } finally {
+        isExecuting = false;
+        if (isMounted && active) {
+          timeoutId = setTimeout(poll, intervalMs);
+        }
+      }
+    }
+
+    // Initial poll
+    poll();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [active, intervalMs]);
 }

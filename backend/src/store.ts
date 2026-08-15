@@ -1,8 +1,8 @@
 // ============================================================
-// Store — in-memory state. Swap this module for Supabase/Redis later.
+// Store — in-memory state for rooms and isolated player answers
 // ============================================================
 
-import { Room, RoundAnswers } from './types';
+import { Room, RoundAnswers, Answer } from './types';
 
 // Primary room map
 const rooms = new Map<string, Room>();
@@ -17,14 +17,15 @@ export function getRoom(code: string): Room | undefined {
 }
 
 export function setRoom(room: Room): void {
-  rooms.set(room.code, { ...room, updatedAt: Date.now() });
+  rooms.set(room.code.toUpperCase(), { ...room, updatedAt: Date.now() });
 }
 
 export function deleteRoom(code: string): void {
-  rooms.delete(code.toUpperCase());
+  const upper = code.toUpperCase();
+  rooms.delete(upper);
   // Clean related answers
   for (const key of answers.keys()) {
-    if (key.startsWith(code.toUpperCase() + '::')) {
+    if (key.startsWith(upper + '::')) {
       answers.delete(key);
     }
   }
@@ -44,13 +45,15 @@ export function setPlayerAnswer(
   roomCode: string,
   roundNumber: number,
   role: 'host' | 'guest',
-  answer: import('./types').Answer
+  answer: Answer
 ): boolean {
   const key = answerKey(roomCode, roundNumber);
   const current = answers.get(key) ?? {};
 
-  // Prevent overwriting an already-submitted answer
-  if (current[role]) return false;
+  // Idempotent: If player already submitted this exact choice, return true
+  if (current[role]) {
+    return current[role]?.choice === answer.choice;
+  }
 
   answers.set(key, { ...current, [role]: answer });
   return true;
