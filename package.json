@@ -1,0 +1,24 @@
+{
+  "name": "this-or-that",
+  "version": "1.0.0",
+  "description": "THIS ⚡ THAT — Fast-paced 2-player synchronization party game",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "multiplayer-game",
+    "this-or-that",
+    "react",
+    "express",
+    "gemini-ai",
+    "vite"
+  ],
+  "author": "",
+  "license": "MIT"
+}

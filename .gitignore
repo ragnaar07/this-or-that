@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables (Never commit real secrets!)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build & Bundler outputs
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+.vite/
+**/.vite/
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE & Editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Temporary & cache files
+*.tmp
+*.temp
+.cache/
+**/.cache/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Runtime files
+*.pid
+*.seed

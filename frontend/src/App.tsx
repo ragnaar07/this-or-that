@@ -1,0 +1,60 @@
+import { useState } from 'react';
+import { Home } from './pages/Home';
+import { Lobby } from './pages/Lobby';
+import { Game } from './pages/Game';
+import type { AppScreen, PlayerSession, RoomState } from './types/game';
+
+export default function App() {
+  const [screen, setScreen] = useState<AppScreen>('HOME');
+  const [session, setSession] = useState<PlayerSession | null>(null);
+  const [roomState, setRoomState] = useState<RoomState | null>(null);
+
+  function goHome() {
+    setScreen('HOME');
+    setSession(null);
+    setRoomState(null);
+  }
+
+  function handleEnterLobby(s: PlayerSession) {
+    setSession(s);
+    setScreen('LOBBY');
+  }
+
+  function handleGameStart(room: RoomState) {
+    // Called from Lobby when guest joins and game starts
+    setRoomState(room);
+    setScreen('GAME');
+  }
+
+  return (
+    <>
+      {screen === 'HOME' && (
+        <Home
+          onEnterLobby={handleEnterLobby}
+          onEnterGame={(s, room) => {
+            // Guest goes directly to game (no lobby)
+            setSession(s);
+            setRoomState(room);
+            setScreen('GAME');
+          }}
+        />
+      )}
+
+      {screen === 'LOBBY' && session && (
+        <Lobby
+          session={session}
+          onGameStart={handleGameStart}
+          onCancel={goHome}
+        />
+      )}
+
+      {screen === 'GAME' && session && roomState && (
+        <Game
+          session={session}
+          initialRoom={roomState}
+          onLeave={goHome}
+        />
+      )}
+    </>
+  );
+}
