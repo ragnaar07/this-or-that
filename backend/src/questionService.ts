@@ -1,28 +1,41 @@
 // ============================================================
-// AI Question & Final Analysis Service — Google Gemini & OpenAI
-// India-First entertainment insight engine with Section 23 schema
+// AI Question & Final Analysis Service — Google Gemini & OpenAI (V4)
+// Dynamic 30+ Genres, Predictions, Chaos, Achievements, Tone Modes
 // ============================================================
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
-import { Question, RoundHistoryItem, FinalReport, CategoryScore } from './types';
-import { getFallbackQuestion } from './fallbackQuestions';
+import {
+  Question,
+  RoundHistoryItem,
+  FinalReport,
+  CategoryScore,
+  Achievement,
+  PredictionScore,
+  RoundType,
+} from './types';
+import { getFallbackQuestion, getRoundTypeForRound } from './fallbackQuestions';
 
-const QUESTION_SYSTEM_PROMPT = `You are generating content for THIS ⚡ THAT, a multiplayer preference game primarily designed for a broad Indian audience across metros, tier-2 cities and tier-3 cities.
+const QUESTION_SYSTEM_PROMPT = `You are creating questions for THIS ⚡ THAT, a multiplayer social game primarily designed for a broad Indian audience.
 
-India is culturally, linguistically, regionally and economically diverse.
-Do not assume all Indian users share one culture, religion, language, cuisine, lifestyle or socioeconomic background.
-Questions should feel naturally relatable to modern Indian life while remaining inclusive across regions.
+The audience includes people from metros, tier-2 cities, tier-3 cities and diverse regions of India.
+India is culturally, linguistically, economically and regionally diverse.
+Do not assume one Indian culture.
 
-Use Indian contexts when useful:
-food, chai, street food, weddings, family functions, festivals, cricket, Bollywood, regional cinema, OTT, WhatsApp, UPI, Indian travel, trains, metros, traffic, college, office life, roommates, online shopping, food delivery, Indian social situations and everyday habits.
+Create a dynamic mixture of:
+Indian everyday life, food, Bollywood, regional cinema, OTT, music, cricket, memes, internet culture, friendship, social behaviour, family situations, travel, money/lifestyle, career, technology, childhood nostalgia, crazy scenarios, imagination, moral dilemmas, shopping, festivals, college, hostel, office life.
 
-Mix universal questions with India-specific situations.
-Avoid stereotypes.
-Do not infer religion, caste, political affiliation, income, sexual orientation, medical conditions or other sensitive attributes.
-The goal is entertainment and observable preference patterns, not psychological diagnosis.
+Questions should feel natural, modern, funny and conversational.
+Do not make the game feel like an exam.
+Do not require obscure factual knowledge.
+Questions should focus primarily on preferences and choices.
+Every question must have exactly two clear options.
+Do not repeatedly use the same topic.
+Do not generate five questions about food in a row.
+Do not stereotype Indians.
+Avoid sensitive personal attributes.
 
-Generate ONE pair of short choices per request.
+The game should alternate between: easy, funny, cultural, unexpected, chaotic, revealing so that the player experience constantly changes.
 Each option MUST be short (1–4 words max), punchy, and instantly understandable.
 Return ONLY valid JSON: {"category": "...", "optionA": "...", "optionB": "..."}`;
 
@@ -40,7 +53,6 @@ function extractJson(text: string): any {
   return JSON.parse(cleaned);
 }
 
-// Available Gemini models in priority order
 const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
 
 // ---- Question Generation ----
@@ -48,22 +60,33 @@ const GEMINI_MODELS = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
 async function generateQuestionWithGemini(
   apiKey: string,
   recentQuestions: string[],
-  roundNumber = 1
+  roundNumber = 1,
+  roundType: RoundType = 'NORMAL',
+  gameMode = 'RANDOM'
 ): Promise<Question> {
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  let targetTheme = 'Everyday Indian life or Food & Chai (low pressure, fun)';
-  if (roundNumber > 5 && roundNumber <= 10) {
-    targetTheme = 'Indian social situations, digital habits (WhatsApp, UPI, reels), or entertainment (OTT, cinema, cricket)';
-  } else if (roundNumber > 10 && roundNumber <= 15) {
-    targetTheme = 'Indian lifestyle, PG/office life, travel (Goa vs mountains, trains), or money & ambition';
-  } else if (roundNumber > 15) {
-    targetTheme = 'Friendship & love dynamics, crazy scenarios, or unexpected superpowers';
+  let themeGuidance = 'Dynamic Indian culture or everyday habit';
+  if (roundType === 'CHAOS') {
+    themeGuidance = 'Absurd, crazy dilemmas or unexpected superpowers (e.g. 10 crore no internet, teleportation)';
+  } else if (roundType === 'PREDICTION') {
+    themeGuidance = 'Revealing social quirks, digital habits (WhatsApp/UPI), or friendship dilemmas where guessing is fun';
+  } else if (roundType === 'DOUBLE_POINTS') {
+    themeGuidance = 'High-stakes lifestyle, money choices, or core priorities';
+  } else if (gameMode === 'FOOD') {
+    themeGuidance = 'Indian street food, sweets, regional dishes, chai/coffee habits';
+  } else if (gameMode === 'ENTERTAINMENT') {
+    themeGuidance = 'Bollywood, regional cinema, OTT, cricket, music, memes';
+  } else if (roundNumber <= 4) {
+    themeGuidance = 'Low-pressure, funny everyday warm-up';
   }
 
   const recentList = recentQuestions.slice(-15).join(', ');
   const prompt = `Generate one fun India-first "this or that" choice pair.
-Round number: ${roundNumber} of 20 (Target theme: ${targetTheme}).
+Round number: ${roundNumber} of 20.
+Round Type: ${roundType}.
+Theme focus: ${themeGuidance}.
+Mode: ${gameMode}.
 Keep each option short (1-4 words max).
 Recently used (do NOT repeat): ${recentList || 'none yet'}.
 Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
@@ -94,87 +117,46 @@ Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
           category: parsed.category.trim(),
           optionA: parsed.optionA.trim(),
           optionB: parsed.optionB.trim(),
+          roundType,
         };
       }
     } catch {
-      // try next model
       continue;
     }
   }
 
-  throw new Error('All Gemini model question generation attempts failed');
+  throw new Error('Gemini question generation model attempts failed');
 }
 
-async function generateQuestionWithOpenAI(
-  apiKey: string,
+export async function generateQuestion(
   recentQuestions: string[],
-  roundNumber = 1
+  roundNumber = 1,
+  roundType?: RoundType,
+  gameMode = 'RANDOM'
 ): Promise<Question> {
-  const openai = new OpenAI({ apiKey });
-  const recentList = recentQuestions.slice(-15).join(', ');
-  const userPrompt = `Generate one fun India-first "this or that" choice pair for round ${roundNumber} of 20.
-Keep each option short (1-4 words max).
-Recently used (avoid repeating): ${recentList || 'none yet'}.
-Return JSON only: {"category":"...","optionA":"...","optionB":"..."}`;
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: QUESTION_SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt },
-    ],
-    max_tokens: 150,
-    temperature: 0.95,
-    response_format: { type: 'json_object' },
-  });
-
-  const content = response.choices[0]?.message?.content ?? '';
-  const parsed = extractJson(content);
-
-  if (
-    typeof parsed.category === 'string' &&
-    typeof parsed.optionA === 'string' &&
-    typeof parsed.optionB === 'string' &&
-    parsed.optionA.trim().length > 0 &&
-    parsed.optionB.trim().length > 0
-  ) {
-    return {
-      category: parsed.category.trim(),
-      optionA: parsed.optionA.trim(),
-      optionB: parsed.optionB.trim(),
-    };
-  }
-
-  throw new Error('Invalid OpenAI question structure');
-}
-
-export async function generateQuestion(recentQuestions: string[], roundNumber = 1): Promise<Question> {
+  const targetRoundType = roundType || getRoundTypeForRound(roundNumber);
   const geminiKey = process.env.GEMINI_API_KEY;
-  const openAiKey = process.env.OPENAI_API_KEY;
 
   if (geminiKey && geminiKey !== 'your_gemini_key_here') {
     try {
-      const q = await generateQuestionWithGemini(geminiKey, recentQuestions, roundNumber);
+      const q = await generateQuestionWithGemini(
+        geminiKey,
+        recentQuestions,
+        roundNumber,
+        targetRoundType,
+        gameMode
+      );
       return q;
     } catch (err) {
-      console.warn('[AI:Gemini] Question generation fallback:', err instanceof Error ? err.message : err);
+      console.warn('[AI:Gemini] Question fallback:', err instanceof Error ? err.message : err);
     }
   }
 
-  if (openAiKey && openAiKey.startsWith('sk-')) {
-    try {
-      const q = await generateQuestionWithOpenAI(openAiKey, recentQuestions, roundNumber);
-      return q;
-    } catch (err) {
-      console.warn('[AI:OpenAI] Question generation fallback:', err instanceof Error ? err.message : err);
-    }
-  }
-
-  return getFallbackQuestion(recentQuestions, roundNumber);
+  return getFallbackQuestion(recentQuestions, roundNumber, targetRoundType, gameMode);
 }
 
 // ============================================================
-// Category Analysis & Grounded Pattern Calculator
+// Mathematical Category & Score Calculator
 // ============================================================
 
 export function computeCategoryScores(history: RoundHistoryItem[]): CategoryScore[] {
@@ -193,16 +175,238 @@ export function computeCategoryScores(history: RoundHistoryItem[]): CategoryScor
   const scores: CategoryScore[] = [];
   for (const [category, stats] of catMap.entries()) {
     const matchPercentage = stats.total > 0 ? Math.round((stats.matched / stats.total) * 100) : 0;
-    scores.push({ category, matchPercentage });
+    scores.push({
+      category,
+      matchPercentage,
+      totalQuestions: stats.total,
+      matchedQuestions: stats.matched,
+    });
   }
 
-  // Sort by total questions in category descending
-  return scores;
+  return scores.sort((a, b) => b.totalQuestions - a.totalQuestions);
 }
 
 // ============================================================
-// Final AI Game Analysis Engine
-// Analyzes all rounds and generates a witty, shared report
+// Dynamic Prediction Score Calculator
+// ============================================================
+
+export function computePredictionScore(
+  history: RoundHistoryItem[],
+  hostName: string,
+  guestName: string
+): PredictionScore | undefined {
+  const predictionRounds = history.filter(h => h.roundType === 'PREDICTION' || h.hostPrediction || h.guestPrediction);
+  if (predictionRounds.length === 0) return undefined;
+
+  let hostCorrect = 0;
+  let guestCorrect = 0;
+  const total = predictionRounds.length;
+
+  for (const r of predictionRounds) {
+    if (r.hostPredictionResult === 'CORRECT') hostCorrect++;
+    if (r.guestPredictionResult === 'CORRECT') guestCorrect++;
+  }
+
+  let summary = 'You both tested your telepathic intuition!';
+  if (hostCorrect > guestCorrect) {
+    summary = `${hostName} knew ${guestName} better (${hostCorrect}/${total}) than ${guestName} knew ${hostName} (${guestCorrect}/${total})!`;
+  } else if (guestCorrect > hostCorrect) {
+    summary = `${guestName} knew ${hostName} better (${guestCorrect}/${total}) than ${hostName} knew ${guestName} (${hostCorrect}/${total})!`;
+  } else if (hostCorrect === total && total > 0) {
+    summary = `Twin Telepaths! Both ${hostName} and ${guestName} predicted each other with 100% accuracy (${hostCorrect}/${total})! 🎯`;
+  } else {
+    summary = `Both scored ${hostCorrect}/${total} in predicting each other's instincts.`;
+  }
+
+  return {
+    hostCorrect,
+    guestCorrect,
+    totalPredictions: total,
+    hostName,
+    guestName,
+    summary,
+  };
+}
+
+// ============================================================
+// Achievements Engine (Evidence-Based from Actual Data)
+// ============================================================
+
+export function computeAchievements(
+  history: RoundHistoryItem[],
+  matchPercentage: number,
+  predictionScore?: PredictionScore
+): Achievement[] {
+  const achievements: Achievement[] = [];
+  const catScores = computeCategoryScores(history);
+
+  // 1. Same Brain
+  if (matchPercentage >= 75) {
+    achievements.push({
+      id: 'same_brain',
+      title: '⚡ SAME BRAIN',
+      icon: '⚡',
+      description: `Incredible ${matchPercentage}% overall telepathic synchronization!`,
+      unlockedFor: 'both',
+    });
+  }
+
+  // 2. Complete Opposites
+  if (matchPercentage <= 40 && history.length >= 5) {
+    achievements.push({
+      id: 'opposites',
+      title: '💀 COMPLETE OPPOSITES',
+      icon: '💀',
+      description: 'Zero common logic, pure entertaining chaos duo.',
+      unlockedFor: 'both',
+    });
+  }
+
+  // 3. Mind Reader
+  if (predictionScore && (predictionScore.hostCorrect >= 2 || predictionScore.guestCorrect >= 2)) {
+    const leader = predictionScore.hostCorrect >= predictionScore.guestCorrect
+      ? predictionScore.hostName
+      : predictionScore.guestName;
+    achievements.push({
+      id: 'mind_reader',
+      title: '🧠 MIND READER',
+      icon: '🧠',
+      description: `${leader} nailed mind reading predictions like a psychic!`,
+      unlockedFor: 'both',
+    });
+  }
+
+  // 4. Food Soulmates
+  const foodScore = catScores.find(c => c.category.toLowerCase().includes('food'));
+  if (foodScore && foodScore.matchPercentage >= 75 && foodScore.totalQuestions >= 2) {
+    achievements.push({
+      id: 'food_soulmates',
+      title: '🍜 FOOD SOULMATES',
+      icon: '🍜',
+      description: `${foodScore.matchPercentage}% agreement on street food, chai, and dinner tastes.`,
+      unlockedFor: 'both',
+    });
+  }
+
+  // 5. Cinema Twins
+  const cinemaScore = catScores.find(c => c.category.toLowerCase().includes('cinema') || c.category.toLowerCase().includes('bollywood'));
+  if (cinemaScore && cinemaScore.matchPercentage >= 75) {
+    achievements.push({
+      id: 'cinema_twins',
+      title: '🎬 CINEMA TWINS',
+      icon: '🎬',
+      description: `${cinemaScore.matchPercentage}% sync on Bollywood, movies, and entertainment.`,
+      unlockedFor: 'both',
+    });
+  }
+
+  // 6. Chaos Partners
+  const chaosMatches = history.filter(h => h.roundType === 'CHAOS' && h.result === 'MATCH');
+  if (chaosMatches.length > 0) {
+    achievements.push({
+      id: 'chaos_partners',
+      title: '😂 CHAOS PARTNERS',
+      icon: '😂',
+      description: 'Matched on wild, absurd superpower dilemmas without hesitation.',
+      unlockedFor: 'both',
+    });
+  }
+
+  // 7. Travel Twins
+  const travelScore = catScores.find(c => c.category.toLowerCase().includes('travel'));
+  if (travelScore && travelScore.matchPercentage >= 75) {
+    achievements.push({
+      id: 'travel_twins',
+      title: '✈️ TRAVEL TWINS',
+      icon: '✈️',
+      description: 'Ready to pack bags on the exact same holiday wavelength.',
+      unlockedFor: 'both',
+    });
+  }
+
+  // 8. Cricket Connection
+  const cricketScore = catScores.find(c => c.category.toLowerCase().includes('cricket'));
+  if (cricketScore && cricketScore.matchPercentage >= 75) {
+    achievements.push({
+      id: 'cricket_connection',
+      title: '🏏 CRICKET CONNECTION',
+      icon: '🏏',
+      description: 'Unified cricket watching & match thriller philosophy.',
+      unlockedFor: 'both',
+    });
+  }
+
+  // Ensure at least 2 fun achievements are awarded
+  if (achievements.length < 2) {
+    achievements.push({
+      id: 'plot_twist',
+      title: '🌀 PLOT TWIST',
+      icon: '🌀',
+      description: 'Surprised each other with wildly unpredictable answer combinations.',
+      unlockedFor: 'both',
+    });
+  }
+
+  return achievements.slice(0, 4);
+}
+
+// ============================================================
+// Live Game Reaction Engine
+// ============================================================
+
+export function generateLiveReaction(
+  isMatch: boolean,
+  streak: number,
+  roundType: RoundType,
+  hostPredictionCorrect?: boolean,
+  guestPredictionCorrect?: boolean
+): string {
+  if (roundType === 'PREDICTION') {
+    if (hostPredictionCorrect && guestPredictionCorrect) {
+      return '🎯 DOUBLE MIND READERS! Both predicted each other accurately!';
+    }
+    if (hostPredictionCorrect || guestPredictionCorrect) {
+      return '🎯 MIND READER! One of you guessed the other’s mind!';
+    }
+    return '❌ YOU THOUGHT YOU KNEW THEM 😂';
+  }
+
+  if (roundType === 'CHAOS' && isMatch) {
+    return '😂 CHAOS HARMONY! How on earth did you both pick that?!';
+  }
+
+  if (roundType === 'DOUBLE_POINTS' && isMatch) {
+    return '🔥 DOUBLE POINTS SECURED! +2 To Score!';
+  }
+
+  if (isMatch) {
+    if (streak >= 4) return '⚡⚡⚡ UNSTOPPABLE SYNC! ARE YOU TWO SHARING A BRAIN?!';
+    if (streak === 3) return '⚡ 3-IN-A-ROW! Telepathic connection active!';
+    const matchReactions = [
+      '⚡ SAME BRAIN!',
+      'Okay... that was suspiciously easy.',
+      'Locked in complete sync! ⚡',
+      'No hesitation. Same thought.',
+      'Certified brain sync! 🎯',
+    ];
+    return matchReactions[Math.floor(Math.random() * matchReactions.length)];
+  }
+
+  // Mismatch
+  if (streak <= -4) return '💀 4 DISAGREEMENTS IN A ROW! Do you two even know each other?! 😂';
+  if (streak === -3) return '💀 OPPOSITE ENERGY OVERLOAD! Complete divergence!';
+  const diffReactions = [
+    '💀 OPPOSITE ENERGY',
+    'Yeah... definitely two different humans.',
+    'Not even in the same universe! 😂',
+    'That debate is going to last a week.',
+    'Different planets, same game! 🪐',
+  ];
+  return diffReactions[Math.floor(Math.random() * diffReactions.length)];
+}
+
+// ============================================================
+// Final AI Game Analysis Engine (V4)
 // ============================================================
 
 export async function generateFinalReport(
@@ -213,10 +417,17 @@ export async function generateFinalReport(
   totalCompleted: number,
   totalRounds: number,
   isPartial: boolean,
-  interruptedReason?: string
+  interruptedReason?: string,
+  gameMode = 'RANDOM',
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
 ): Promise<FinalReport> {
   const matchPercentage = totalCompleted > 0 ? Math.round((matches / totalCompleted) * 100) : 0;
   const categoryScores = computeCategoryScores(history);
+  const predictionScore = computePredictionScore(history, hostName, guestName);
+  const achievements = computeAchievements(history, matchPercentage, predictionScore);
+
+  const totalScore = history.reduce((acc, h) => acc + (h.pointsAwarded || (h.result === 'MATCH' ? 1 : 0)), 0);
+  const maxPossible = history.reduce((acc, h) => acc + (h.roundType === 'DOUBLE_POINTS' ? 2 : 1), 0);
 
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey && geminiKey !== 'your_gemini_key_here') {
@@ -231,13 +442,19 @@ export async function generateFinalReport(
         totalRounds,
         matchPercentage,
         categoryScores,
+        achievements,
+        predictionScore,
+        totalScore,
+        maxPossible,
         isPartial,
-        interruptedReason
+        interruptedReason,
+        gameMode,
+        aiTone
       );
-      console.log(`[AI:Gemini] ✨ Generated Final Report: "${report.headline}" (${report.matchPercentage}% match)`);
+      console.log(`[AI:Gemini] ✨ Generated V4 Report: "${report.headline}" (${report.matchPercentage}% match) [Tone: ${aiTone}]`);
       return report;
     } catch (err) {
-      console.error('[AI:Gemini] Final report generation failed, using local fallback:', err);
+      console.error('[AI:Gemini] Final report fallback:', err);
     }
   }
 
@@ -250,8 +467,14 @@ export async function generateFinalReport(
     totalRounds,
     matchPercentage,
     categoryScores,
+    achievements,
+    predictionScore,
+    totalScore,
+    maxPossible,
     isPartial,
-    interruptedReason
+    interruptedReason,
+    gameMode,
+    aiTone
   );
 }
 
@@ -265,58 +488,74 @@ async function generateReportWithGemini(
   totalRounds: number,
   matchPercentage: number,
   categoryScores: CategoryScore[],
+  achievements: Achievement[],
+  predictionScore: PredictionScore | undefined,
+  totalScore: number,
+  maxPossible: number,
   isPartial: boolean,
-  interruptedReason?: string
+  interruptedReason?: string,
+  gameMode = 'RANDOM',
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
 ): Promise<FinalReport> {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   const historySummary = history.map((item) => {
     const p1 = item.hostChoice ?? 'No answer';
     const p2 = item.guestChoice ?? 'No answer';
-    return `Round ${item.roundNumber} [${item.category}]: Question: "${item.question}". ${hostName} chose "${p1}", ${guestName} chose "${p2}". Result: ${item.result}`;
+    const predNote = item.hostPrediction || item.guestPrediction
+      ? ` | Predictions: ${hostName} predicted "${item.hostPrediction || '—'}" (${item.hostPredictionResult || '—'}), ${guestName} predicted "${item.guestPrediction || '—'}" (${item.guestPredictionResult || '—'})`
+      : '';
+    return `Round ${item.roundNumber} [${item.category}] (${item.roundType || 'NORMAL'}): "${item.question}". ${hostName}: "${p1}", ${guestName}: "${p2}". Result: ${item.result}${predNote}`;
   }).join('\n');
 
-  const catScoreSummary = categoryScores
-    .map((c) => `- ${c.category}: ${c.matchPercentage}% match`)
-    .join('\n');
+  const catSummary = categoryScores.map(c => `- ${c.category}: ${c.matchPercentage}% (${c.matchedQuestions}/${c.totalQuestions})`).join('\n');
+  const achSummary = achievements.map(a => `- ${a.title}: ${a.description}`).join('\n');
 
-  const prompt = `You are the clever, witty entertainment insight engine for THIS ⚡ THAT, a multiplayer game for Indian users.
+  const prompt = `You are the clever, witty entertainment insight engine for THIS ⚡ THAT, an India-first multiplayer social game.
 Player 1: ${hostName}
 Player 2: ${guestName}
-Game Status: ${isPartial ? `PARTIAL GAME (${totalCompleted} of ${totalRounds} questions answered before someone left)` : `COMPLETE GAME (${totalCompleted} of ${totalRounds} questions answered)`}
-Overall Match Rate: ${matchPercentage}% (${matches} of ${totalCompleted} matched)
+Game Status: ${isPartial ? `PARTIAL (${totalCompleted} of ${totalRounds} rounds completed)` : `COMPLETE (${totalCompleted} of ${totalRounds} rounds completed)`}
+Overall Match Rate: ${matchPercentage}% (${matches} of ${totalCompleted} matched) | Score: ${totalScore}/${maxPossible}
+Requested Tone: ${aiTone.toUpperCase()} (Nice = wholesome, Fun = witty friend, Brutal = playfully sharp & roasted with zero mercy, but NEVER abusive or clinically diagnosing).
 
-Category Breakdown:
-${catScoreSummary || 'None'}
+Category Match Rates:
+${catSummary || 'None'}
 
-Detailed Round History:
-${historySummary || 'No rounds answered.'}
+Achievements Earned:
+${achSummary || 'None'}
 
-PRODUCT VISION & RULES:
-1. Make them say "BRO... HOW DID THIS GAME KNOW THAT? 😂" by finding genuine patterns, surprises, and subtle contradictions in their actual answers.
-2. The AI is a clever, witty friend — NOT an academic, clinical psychologist, or robot.
-3. GROUND EVERY OBSERVATION in the actual choices above. Never invent facts. Never claim psychological diagnoses or trauma.
-4. If they had contradictions (e.g. choosing to save money but picking luxury trips, or late-night food vs morning routine), point it out playfully!
-5. Mention their category differences (e.g. "Same person when it comes to food, but completely opposite on travel!").
-6. Return ONLY valid JSON matching this exact structure:
+Mind Reader Prediction Score:
+${predictionScore ? predictionScore.summary : 'No prediction rounds played.'}
+
+Detailed Round Answers:
+${historySummary}
+
+CRITICAL RULES:
+1. Make them say: "BRO... HOW DID THIS GAME KNOW THAT? 😂".
+2. GROUND EVERY OBSERVATION in their actual answers above. No generic horoscope fluff.
+3. Catch hilarious contradictions (e.g. Save money vs Luxury trip, Early riser vs 2 AM reels).
+4. Tone should be sharp, witty, and grounded. Never clinical, medical, or diagnostic.
+5. Return JSON ONLY matching this structure:
 
 {
-  "headline": "A short, punchy, witty headline in CAPS (e.g. 'SAME BRAIN, DIFFERENT CHAOS', 'ACCIDENTAL TELEPATHS', 'CHAOTIC OPPOSITES')",
-  "overallVibe": "A 2-4 word vibe (e.g. 'Chaos Partners', 'Twin Telepaths', 'Yin & Yang')",
+  "headline": "A short, punchy witty headline in CAPS",
+  "overallVibe": "A 2-4 word vibe tag",
   "matchPercentage": ${matchPercentage},
   "completedQuestions": ${totalCompleted},
   "totalQuestions": ${totalRounds},
+  "totalScore": ${totalScore},
+  "maxPossibleScore": ${maxPossible},
   "categoryScores": [
-    ${categoryScores.map((c) => `{"category": "${c.category}", "matchPercentage": ${c.matchPercentage}}`).join(', ')}
+    ${categoryScores.map(c => `{"category": "${c.category}", "matchPercentage": ${c.matchPercentage}, "totalQuestions": ${c.totalQuestions}, "matchedQuestions": ${c.matchedQuestions}}`).join(', ')}
   ],
   "strongestMatches": ["2-3 specific areas where their choices were 100% in sync"],
   "biggestDifferences": ["2-3 specific topics where their instincts clashed"],
   "surprisingPatterns": ["1-2 surprising grounded observations from their answer combinations"],
-  "contradictions": ["1 funny contradiction detected between early and late choices, if any"],
+  "contradictions": ["1 funny contradiction detected between their choices, if any"],
   "funniestDifference": "A 1-2 sentence witty observation about their most hilarious disagreement",
-  "mostUnexpectedMatch": "A 1-2 sentence highlight about a wild or quirky choice they both picked",
+  "mostUnexpectedMatch": "A 1-2 sentence highlight about an unexpected or quirky choice they both picked",
   "sharedTendencies": ["2 playful insights about what they have in common"],
-  "conversationStarters": ["2 fun provocative questions they should debate right now based on their disagreements"],
+  "conversationStarters": ["2 fun provocative questions they should debate right now"],
   "player1Insight": "A playful 1-sentence persona for ${hostName} based on their choices",
   "player2Insight": "A playful 1-sentence persona for ${guestName} based on their choices",
   "finalVerdict": "A 2-3 sentence fun conclusion celebrating their dynamic."
@@ -327,7 +566,7 @@ PRODUCT VISION & RULES:
       const model = genAI.getGenerativeModel({
         model: modelName,
         generationConfig: {
-          temperature: 0.85,
+          temperature: aiTone === 'brutal' ? 0.95 : 0.85,
           maxOutputTokens: 1400,
         },
       });
@@ -342,36 +581,42 @@ PRODUCT VISION & RULES:
         matchPercentage,
         completedQuestions: totalCompleted,
         totalQuestions: totalRounds,
+        totalScore,
+        maxPossibleScore: maxPossible,
         categoryScores: Array.isArray(parsed.categoryScores) && parsed.categoryScores.length > 0
           ? parsed.categoryScores
           : categoryScores,
+        achievements,
+        predictionScore,
         strongestMatches: Array.isArray(parsed.strongestMatches) && parsed.strongestMatches.length > 0
           ? parsed.strongestMatches.map(String)
-          : ['Food & Chai', 'Travel Instincts'],
+          : ['Food & Chai', 'Cinema Preferences'],
         biggestDifferences: Array.isArray(parsed.biggestDifferences) && parsed.biggestDifferences.length > 0
           ? parsed.biggestDifferences.map(String)
-          : ['Weekend Planning', 'Digital Habits'],
+          : ['Travel Planning', 'Digital Habits'],
         surprisingPatterns: Array.isArray(parsed.surprisingPatterns)
           ? parsed.surprisingPatterns.map(String)
-          : [`You matched ${matchPercentage}% overall, but showed strong mutual alignment on key priorities.`],
+          : [`You matched ${matchPercentage}% overall, showing uncanny alignment on core priorities.`],
         contradictions: Array.isArray(parsed.contradictions)
           ? parsed.contradictions.map(String)
           : [],
-        funniestDifference: String(parsed.funniestDifference || 'One of you plans every second while the other believes in pure improvisation! 😂'),
+        funniestDifference: String(parsed.funniestDifference || 'One plans every second while the other believes in pure improvisation! 😂'),
         mostUnexpectedMatch: String(parsed.mostUnexpectedMatch || 'You both locked in the exact same wild choice without hesitation!'),
         sharedTendencies: Array.isArray(parsed.sharedTendencies) && parsed.sharedTendencies.length > 0
           ? parsed.sharedTendencies.map(String)
-          : ['You both value comfort and good food', 'Spontaneous plans resonate with both of you'],
+          : ['You both value good food and comfort', 'Spontaneous plans resonate with both of you'],
         conversationStarters: Array.isArray(parsed.conversationStarters) && parsed.conversationStarters.length > 0
           ? parsed.conversationStarters.map(String)
-          : ['Who actually decides where to eat when you hang out?', 'Would your road trip survive without Google Maps?'],
-        player1Insight: String(parsed.player1Insight || parsed.player1Profile || `${hostName} made bold, instinct-driven choices.`),
-        player2Insight: String(parsed.player2Insight || parsed.player2Profile || `${guestName} brought distinct energy and unique flavor.`),
-        player1Profile: String(parsed.player1Insight || parsed.player1Profile || `${hostName} made bold, instinct-driven choices.`),
-        player2Profile: String(parsed.player2Insight || parsed.player2Profile || `${guestName} brought distinct energy and unique flavor.`),
-        finalVerdict: String(parsed.finalVerdict || `You scored ${matchPercentage}% synchronization! Whether you match on everything or disagree on the fun stuff, your dynamic is certified gold.`),
+          : ['Who actually decides where to eat when you hang out?', 'Would your road trip survive without GPS?'],
+        player1Insight: String(parsed.player1Insight || parsed.player1Profile || `${hostName} made decisive, instinct-driven choices.`),
+        player2Insight: String(parsed.player2Insight || parsed.player2Profile || `${guestName} brought independent flavor and sharp preferences.`),
+        player1Profile: String(parsed.player1Insight || parsed.player1Profile || `${hostName} made decisive, instinct-driven choices.`),
+        player2Profile: String(parsed.player2Insight || parsed.player2Profile || `${guestName} brought independent flavor and sharp preferences.`),
+        finalVerdict: String(parsed.finalVerdict || `You scored ${matchPercentage}% synchronization! Whether you are cosmic twins or entertaining opposites, your dynamic makes every decision an adventure.`),
         isPartial,
         interruptedReason,
+        gameMode,
+        aiTone,
         generatedAt: Date.now(),
       };
     } catch {
@@ -379,7 +624,7 @@ PRODUCT VISION & RULES:
     }
   }
 
-  throw new Error('All Gemini report generation model attempts failed');
+  throw new Error('Gemini analysis model failover exhausted');
 }
 
 // ---- Local Fallback Report Engine ----
@@ -393,18 +638,20 @@ function generateLocalFallbackReport(
   totalRounds: number,
   matchPercentage: number,
   categoryScores: CategoryScore[],
+  achievements: Achievement[],
+  predictionScore: PredictionScore | undefined,
+  totalScore: number,
+  maxPossible: number,
   isPartial: boolean,
-  interruptedReason?: string
+  interruptedReason?: string,
+  gameMode = 'RANDOM',
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
 ): FinalReport {
   const matchingItems = history.filter((h) => h.result === 'MATCH');
   const differingItems = history.filter((h) => h.result === 'NO_MATCH');
 
-  // Category counts
-  const matchCategories = matchingItems.map((h) => h.category);
-  const diffCategories = differingItems.map((h) => h.category);
-
-  const topMatchCats = [...new Set(matchCategories)].slice(0, 3);
-  const topDiffCats = [...new Set(diffCategories)].slice(0, 3);
+  const topMatchCats = categoryScores.filter(c => c.matchPercentage >= 60).map(c => c.category);
+  const topDiffCats = categoryScores.filter(c => c.matchPercentage < 60).map(c => c.category);
 
   let headline = 'SAME BRAIN, DIFFERENT CHAOS';
   let overallVibe = 'Dynamic Duo';
@@ -424,20 +671,18 @@ function generateLocalFallbackReport(
   }
 
   const sampleMatch = matchingItems[0]
-    ? `You both picked "${matchingItems[0].hostChoice}" on ${matchingItems[0].category} without hesitation!`
+    ? `You both picked "${matchingItems[0].hostChoice}" on ${matchingItems[0].category}!`
     : 'You found surprising moments of agreement throughout the game.';
 
   const sampleDiff = differingItems[0]
     ? `${hostName} chose "${differingItems[0].hostChoice ?? '—'}" while ${guestName} picked "${differingItems[0].guestChoice ?? '—'}"!`
-    : 'You agreed on practically everything!';
+    : 'You agreed on almost everything!';
 
   const surprises: string[] = [];
   if (topMatchCats.length > 0 && topDiffCats.length > 0) {
-    surprises.push(`You two think almost identically when it comes to ${topMatchCats[0]}, but have completely opposite philosophies on ${topDiffCats[0]}.`);
-  } else if (matchPercentage > 70) {
-    surprises.push(`Your sync rate remained remarkably consistent from the easy opening rounds right through the deeper choices.`);
+    surprises.push(`You two think almost identically when it comes to ${topMatchCats[0]}, but have completely opposite instincts on ${topDiffCats[0]}.`);
   } else {
-    surprises.push(`You both approached the scenario questions with distinctly unique instincts.`);
+    surprises.push(`Your match percentage remained remarkably consistent across opening rounds and deeper choices.`);
   }
 
   const p1Insight = `${hostName} went with bold, instinct-driven choices throughout the game.`;
@@ -449,7 +694,11 @@ function generateLocalFallbackReport(
     matchPercentage,
     completedQuestions: totalCompleted,
     totalQuestions: totalRounds,
+    totalScore,
+    maxPossibleScore: maxPossible,
     categoryScores,
+    achievements,
+    predictionScore,
     strongestMatches: topMatchCats.length > 0 ? topMatchCats.map((c) => `100% in sync on ${c}`) : ['Shared core instincts', 'Common tastes'],
     biggestDifferences: topDiffCats.length > 0 ? topDiffCats.map((c) => `Clashing instincts on ${c}`) : ['Subtle lifestyle preferences'],
     surprisingPatterns: surprises,
@@ -471,6 +720,8 @@ function generateLocalFallbackReport(
     finalVerdict: `You reached a ${matchPercentage}% match rate across ${totalCompleted} rounds! Whether you are cosmic twins or entertaining opposites, your dynamic makes every decision an adventure.`,
     isPartial,
     interruptedReason,
+    gameMode,
+    aiTone,
     generatedAt: Date.now(),
   };
 }

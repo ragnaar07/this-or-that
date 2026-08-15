@@ -1,7 +1,6 @@
 // ============================================================
-// THIS ⚡ THAT — Express API Server (V2 Full Feature Set)
-// Full multiplayer lifecycle, disconnect detection, shared AI report,
-// partial results, room history, and periodic cleanup.
+// THIS ⚡ THAT — Express API Server (V4 Ultimate Engagement)
+// Dynamic Round Types, Predictions, Chaos, Double Points, Live Reactions
 // ============================================================
 
 import express, { Request, Response, NextFunction } from 'express';
@@ -11,7 +10,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { generateRoomCode, isValidRoomCode } from './roomCode';
-import { generateQuestion, generateFinalReport } from './questionService';
+import { generateQuestion, generateFinalReport, generateLiveReaction } from './questionService';
+import { getRoundTypeForRound } from './fallbackQuestions';
 import {
   getRoom,
   setRoom,
@@ -21,13 +21,13 @@ import {
   clearRoundAnswers,
   getAllRooms,
 } from './store';
-import { Room, Answer, RoundHistoryItem, RoomStatus } from './types';
+import { Room, Answer, RoundHistoryItem, RoundType } from './types';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
-const DEFAULT_TOTAL_ROUNDS = 20;   // 20 questions per game
-const ROUND_DURATION_MS = 10_000;  // 10 seconds per round
-const DISCONNECT_TIMEOUT_MS = 25_000; // 25s without polling = disconnected
+const DEFAULT_TOTAL_ROUNDS = 20;
+const ROUND_DURATION_MS = 10_000;
+const DISCONNECT_TIMEOUT_MS = 25_000;
 
 // ---- Middleware ----
 
@@ -74,14 +74,17 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // ============================================================
 // POST /api/rooms — Create a new room
-// Body: { playerName?: string, totalRounds?: number }
+// Body: { playerName?: string, totalRounds?: number, gameMode?: string, aiTone?: string }
 // ============================================================
 app.post('/api/rooms', (req: Request, res: Response) => {
   try {
-    const playerName = (req.body?.playerName as string | undefined)?.trim() || 'Player 1';
+    const rawName = (req.body?.playerName as string | undefined)?.trim();
+    const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 1';
     const totalRounds = typeof req.body?.totalRounds === 'number' && req.body.totalRounds > 0
       ? Math.min(req.body.totalRounds, 50)
       : DEFAULT_TOTAL_ROUNDS;
+    const gameMode = String(req.body?.gameMode || 'RANDOM').toUpperCase();
+    const aiTone = (['nice', 'fun', 'brutal'].includes(req.body?.aiTone) ? req.body.aiTone : 'fun') as 'nice' | 'fun' | 'brutal';
 
     const playerId = generatePlayerId();
 
@@ -105,22 +108,28 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       roundNumber: 0,
       totalRounds,
       currentQuestion: null,
+      currentRoundType: 'NORMAL',
       roundStartedAt: null,
       roundDeadline: null,
       matches: 0,
       total: 0,
+      score: 0,
+      streak: 0,
       lastResult: null,
       lastHostChoice: null,
       lastGuestChoice: null,
+      lastLiveReaction: null,
       recentQuestions: [],
       history: [],
       finalReport: null,
+      gameMode,
+      aiTone,
       createdAt: now,
       updatedAt: now,
     };
 
     setRoom(room);
-    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${playerId}), Total Rounds: ${totalRounds}`);
+    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}", Mode: ${gameMode}, Tone: ${aiTone}`);
 
     res.json({
       success: true,
@@ -157,11 +166,13 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       return res.status(409).json({ error: 'THAT ROOM IS ALREADY FULL.' });
     }
 
-    const playerName = (req.body?.playerName as string | undefined)?.trim() || 'Player 2';
+    const rawName = (req.body?.playerName as string | undefined)?.trim();
+    const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 2';
     const playerId = generatePlayerId();
 
-    // Generate first question (Tier 1: Fun & Easy)
-    const question = await generateQuestion(room.recentQuestions, 1);
+    // Round 1 Setup
+    const roundType = getRoundTypeForRound(1);
+    const question = await generateQuestion(room.recentQuestions, 1, roundType, room.gameMode);
     const now = Date.now();
 
     const updatedRoom: Room = {
@@ -172,6 +183,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       status: 'PLAYING',
       roundNumber: 1,
       currentQuestion: question,
+      currentRoundType: roundType,
       roundStartedAt: now,
       roundDeadline: now + ROUND_DURATION_MS,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
@@ -179,7 +191,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     };
 
     setRoom(updatedRoom);
-    console.log(`[GUEST JOINED] Room: ${code}, Guest: "${playerName}" (${playerId}) -> Round 1: "${question.optionA}" vs "${question.optionB}"`);
+    console.log(`[GUEST JOINED] Room ${code}: "${playerName}" joined! Round 1 (${roundType}): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({
       success: true,
@@ -195,7 +207,6 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
 
 // ============================================================
 // GET /api/rooms/:code — Poll room state & heartbeat
-// Query: ?playerId=xxx
 // ============================================================
 app.get('/api/rooms/:code', async (req: Request, res: Response) => {
   try {
@@ -227,9 +238,8 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 
       if (hostInactive || guestInactive) {
         const missingPlayer = hostInactive ? room.hostPlayerName : (room.guestPlayerName || 'Opponent');
-        console.warn(`[DISCONNECT DETECTED] Room ${code}: ${missingPlayer} has been inactive > ${DISCONNECT_TIMEOUT_MS / 1000}s`);
+        console.warn(`[DISCONNECT] Room ${code}: ${missingPlayer} disconnected.`);
 
-        // Trigger partial result generation if not already generated
         await interruptGame(room, `${missingPlayer} lost connection.`);
         const updated = getRoom(code)!;
         return res.json({ success: true, room: sanitizeRoom(updated) });
@@ -254,13 +264,13 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// POST /api/rooms/:code/answer — Submit a player's answer
-// Body: { playerId, role, roundNumber, choice }
+// POST /api/rooms/:code/answer — Submit player choice & prediction
+// Body: { playerId, role, roundNumber, choice, prediction }
 // ============================================================
 app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
-    const { playerId, role, roundNumber, choice } = req.body ?? {};
+    const { playerId, role, roundNumber, choice, prediction } = req.body ?? {};
 
     if (!isValidRoomCode(code)) {
       return res.status(400).json({ error: 'Invalid room code.' });
@@ -275,37 +285,37 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
       return res.status(409).json({ error: 'Game has already ended.' });
     }
 
-    // Validate role
     if (role !== 'host' && role !== 'guest') {
       return res.status(400).json({ error: 'Invalid role.' });
     }
 
-    // Validate player identity
     const expectedId = role === 'host' ? room.hostPlayerId : room.guestPlayerId;
     if (playerId !== expectedId) {
       return res.status(403).json({ error: 'Player identity mismatch.' });
     }
 
-    // Update presence
     const now = Date.now();
     if (role === 'host') room.hostLastSeenAt = now;
     if (role === 'guest') room.guestLastSeenAt = now;
 
-    // Validate round number
     if (typeof roundNumber !== 'number' || roundNumber !== room.roundNumber) {
       return res.status(409).json({ error: 'Round number mismatch.' });
     }
 
-    // Validate choice string
     if (typeof choice !== 'string' || choice.trim().length === 0) {
       return res.status(400).json({ error: 'Invalid choice.' });
     }
 
     const trimmedChoice = choice.trim();
+    const trimmedPrediction = typeof prediction === 'string' && prediction.trim().length > 0
+      ? prediction.trim()
+      : undefined;
+
     const answer: Answer = {
       playerId,
       roundNumber,
       choice: trimmedChoice,
+      prediction: trimmedPrediction,
       answeredAt: now,
     };
 
@@ -315,50 +325,15 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
     const hostChoice = roundAnswers.host?.choice ?? null;
     const guestChoice = roundAnswers.guest?.choice ?? null;
 
-    console.log(`[ANSWER] Room: ${code} R${roundNumber}: ${role} ("${trimmedChoice}") | Host: "${hostChoice ?? 'waiting'}", Guest: "${guestChoice ?? 'waiting'}"`);
+    console.log(`[ANSWER] Room ${code} R${roundNumber}: ${role} ("${trimmedChoice}" | Pred: "${trimmedPrediction || 'none'}")`);
 
-    // Case 1: Room is currently PLAYING
+    // If both answered, evaluate early
     if (room.status === 'PLAYING') {
       const bothAnswered = hostChoice !== null && guestChoice !== null;
       if (bothAnswered) {
-        console.log(`[EARLY REVEAL] Both answered for room ${code} round ${roundNumber}`);
         const resolved = resolveRound(code);
         return res.json({ success: true, room: sanitizeRoom(resolved || room) });
       }
-    }
-
-    // Case 2: Room was already set to REVEALING (e.g. deadline grace period)
-    if (room.status === 'REVEALING') {
-      const isMatch =
-        hostChoice !== null &&
-        guestChoice !== null &&
-        hostChoice.trim().toLowerCase() === guestChoice.trim().toLowerCase();
-
-      const wasMatch = room.lastResult === 'MATCH';
-      let matches = room.matches;
-      if (isMatch && !wasMatch) {
-        matches += 1;
-      }
-
-      const updated: Room = {
-        ...room,
-        lastHostChoice: hostChoice,
-        lastGuestChoice: guestChoice,
-        lastResult: isMatch ? 'MATCH' : 'NO_MATCH',
-        matches,
-        updatedAt: Date.now(),
-      };
-
-      // Update history item
-      const histIdx = updated.history.findIndex(h => h.roundNumber === roundNumber);
-      if (histIdx !== -1) {
-        updated.history[histIdx].hostChoice = hostChoice;
-        updated.history[histIdx].guestChoice = guestChoice;
-        updated.history[histIdx].result = isMatch ? 'MATCH' : 'NO_MATCH';
-      }
-
-      setRoom(updated);
-      return res.json({ success: true, room: sanitizeRoom(updated) });
     }
 
     const latest = getRoom(code)!;
@@ -370,8 +345,7 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
 });
 
 // ============================================================
-// POST /api/rooms/:code/next-round — Advance to next round or finish game
-// Body: { playerId }
+// POST /api/rooms/:code/next-round — Advance to next round or finish
 // ============================================================
 app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
   try {
@@ -391,17 +365,17 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       return res.json({ success: true, room: sanitizeRoom(room) });
     }
 
-    // Check if game reached total rounds (e.g. 20 rounds completed)
+    // Check if game complete
     if (room.roundNumber >= room.totalRounds) {
-      console.log(`[GAME COMPLETE] Room ${code} completed all ${room.totalRounds} rounds! Generating final AI analysis...`);
+      console.log(`[GAME COMPLETE] Room ${code} completed all ${room.totalRounds} rounds! Generating AI analysis...`);
       await finishGame(room);
       const finished = getRoom(code)!;
       return res.json({ success: true, room: sanitizeRoom(finished) });
     }
 
-    // Generate next dynamic question based on difficulty curve
     const nextRound = room.roundNumber + 1;
-    const question = await generateQuestion(room.recentQuestions, nextRound);
+    const nextRoundType = getRoundTypeForRound(nextRound);
+    const question = await generateQuestion(room.recentQuestions, nextRound, nextRoundType, room.gameMode);
     const now = Date.now();
 
     clearRoundAnswers(code, room.roundNumber);
@@ -411,6 +385,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       status: 'PLAYING',
       roundNumber: nextRound,
       currentQuestion: question,
+      currentRoundType: nextRoundType,
       roundStartedAt: now,
       roundDeadline: now + ROUND_DURATION_MS,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
@@ -418,7 +393,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
     };
 
     setRoom(updatedRoom);
-    console.log(`[NEXT ROUND] Room ${code} -> Round ${nextRound}/${room.totalRounds}: "${question.optionA}" vs "${question.optionB}"`);
+    console.log(`[NEXT ROUND] Room ${code} -> R${nextRound}/${room.totalRounds} (${nextRoundType}): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({ success: true, room: sanitizeRoom(updatedRoom) });
   } catch (err) {
@@ -428,8 +403,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// DELETE /api/rooms/:code/leave — Player leaves (generates partial result)
-// Body: { playerId }
+// DELETE /api/rooms/:code/leave — Player leaves
 // ============================================================
 app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
   try {
@@ -443,7 +417,6 @@ app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
 
     const leaverName = playerId === room.hostPlayerId ? room.hostPlayerName : (room.guestPlayerName || 'A player');
 
-    // If game has not started yet (in lobby)
     if (room.status === 'WAITING' || room.roundNumber === 0) {
       if (playerId === room.hostPlayerId) {
         deleteRoom(code);
@@ -459,8 +432,7 @@ app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
       return res.json({ success: true, reason: 'left_before_start' });
     }
 
-    // Active game in progress: Freeze & generate Partial Result
-    console.log(`[PLAYER LEFT] ${leaverName} left room ${code} during active game. Generating partial report...`);
+    console.log(`[PLAYER LEFT] ${leaverName} left room ${code}. Freezing partial game...`);
     await interruptGame(room, `${leaverName} left the room.`);
     const updated = getRoom(code)!;
 
@@ -481,25 +453,68 @@ function resolveRound(code: string): Room | null {
   const roundAnswers = getRoundAnswers(code, current.roundNumber);
   const hostChoice = roundAnswers.host?.choice ?? null;
   const guestChoice = roundAnswers.guest?.choice ?? null;
+  const hostPred = roundAnswers.host?.prediction ?? null;
+  const guestPred = roundAnswers.guest?.prediction ?? null;
 
   const isMatch =
     hostChoice !== null &&
     guestChoice !== null &&
     hostChoice.trim().toLowerCase() === guestChoice.trim().toLowerCase();
 
+  // Prediction accuracy
+  let hostPredResult: 'CORRECT' | 'WRONG' | null = null;
+  let guestPredResult: 'CORRECT' | 'WRONG' | null = null;
+
+  if (hostPred && guestChoice) {
+    hostPredResult = hostPred.trim().toLowerCase() === guestChoice.trim().toLowerCase() ? 'CORRECT' : 'WRONG';
+  }
+  if (guestPred && hostChoice) {
+    guestPredResult = guestPred.trim().toLowerCase() === hostChoice.trim().toLowerCase() ? 'CORRECT' : 'WRONG';
+  }
+
+  // Scoring
+  const roundType = current.currentRoundType;
+  let pointsAwarded = 0;
+  if (isMatch) {
+    pointsAwarded = roundType === 'DOUBLE_POINTS' ? 2 : 1;
+  }
+
   const newMatches = current.matches + (isMatch ? 1 : 0);
   const newTotal = current.total + 1;
+  const newScore = (current.score || current.matches) + pointsAwarded;
 
-  // Add to round history
+  // Streak
+  let newStreak = current.streak || 0;
+  if (isMatch) {
+    newStreak = newStreak > 0 ? newStreak + 1 : 1;
+  } else {
+    newStreak = newStreak < 0 ? newStreak - 1 : -1;
+  }
+
+  // Live reaction
+  const liveReaction = generateLiveReaction(
+    isMatch,
+    newStreak,
+    roundType,
+    hostPredResult === 'CORRECT',
+    guestPredResult === 'CORRECT'
+  );
+
   const historyItem: RoundHistoryItem = {
     roundNumber: current.roundNumber,
     question: `${current.currentQuestion?.optionA} or ${current.currentQuestion?.optionB}`,
     category: current.currentQuestion?.category || 'General',
     optionA: current.currentQuestion?.optionA || '',
     optionB: current.currentQuestion?.optionB || '',
+    roundType,
     hostChoice,
     guestChoice,
+    hostPrediction: hostPred,
+    guestPrediction: guestPred,
+    hostPredictionResult: hostPredResult,
+    guestPredictionResult: guestPredResult,
     result: isMatch ? 'MATCH' : 'NO_MATCH',
+    pointsAwarded,
     answeredAt: Date.now(),
   };
 
@@ -508,24 +523,31 @@ function resolveRound(code: string): Room | null {
     status: 'REVEALING',
     matches: newMatches,
     total: newTotal,
+    score: newScore,
+    streak: newStreak,
     lastResult: isMatch ? 'MATCH' : 'NO_MATCH',
     lastHostChoice: hostChoice,
     lastGuestChoice: guestChoice,
+    lastHostPrediction: hostPred,
+    lastGuestPrediction: guestPred,
+    lastHostPredictionResult: hostPredResult,
+    lastGuestPredictionResult: guestPredResult,
+    lastLiveReaction: liveReaction,
     history: [...current.history, historyItem],
     updatedAt: Date.now(),
   };
 
-  console.log(`[EVALUATION] Room ${code} R${current.roundNumber}: ${updated.lastResult} | Host: "${hostChoice ?? '—'}" | Guest: "${guestChoice ?? '—'}" | Score: ${updated.matches}/${updated.total}`);
+  console.log(`[EVALUATION] Room ${code} R${current.roundNumber} (${roundType}): ${updated.lastResult} | Reaction: "${liveReaction}" | Score: ${newScore}`);
 
   setRoom(updated);
   return updated;
 }
 
 // ============================================================
-// Internal: Complete Game (All 20 Rounds)
+// Internal: Finish Game
 // ============================================================
 async function finishGame(room: Room): Promise<void> {
-  if (room.finalReport) return; // Already generated
+  if (room.finalReport) return;
 
   const report = await generateFinalReport(
     room.history,
@@ -534,7 +556,10 @@ async function finishGame(room: Room): Promise<void> {
     room.matches,
     room.total,
     room.totalRounds,
-    false // Complete
+    false,
+    undefined,
+    room.gameMode,
+    room.aiTone
   );
 
   const updated: Room = {
@@ -548,7 +573,7 @@ async function finishGame(room: Room): Promise<void> {
 }
 
 // ============================================================
-// Internal: Interrupt Game (Player Leaves / Disconnects)
+// Internal: Interrupt Game
 // ============================================================
 async function interruptGame(room: Room, reason: string): Promise<void> {
   if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') return;
@@ -561,8 +586,10 @@ async function interruptGame(room: Room, reason: string): Promise<void> {
     room.matches,
     totalCompleted,
     room.totalRounds,
-    true, // Partial
-    reason
+    true,
+    reason,
+    room.gameMode,
+    room.aiTone
   );
 
   const updated: Room = {
@@ -577,13 +604,12 @@ async function interruptGame(room: Room, reason: string): Promise<void> {
 }
 
 // ============================================================
-// Periodic Abandoned Room Cleanup (Runs every 5 minutes)
+// Periodic Abandoned Room Cleanup
 // ============================================================
 setInterval(() => {
   const now = Date.now();
   const all = getAllRooms();
   for (const [code, room] of all.entries()) {
-    // Delete rooms older than 1 hour or inactive for > 20 mins
     const isOld = now - room.createdAt > 3600_000;
     const isAbandoned =
       now - room.hostLastSeenAt > 1200_000 &&
@@ -591,7 +617,7 @@ setInterval(() => {
 
     if (isOld || isAbandoned) {
       deleteRoom(code);
-      console.log(`[CLEANUP] Deleted inactive/expired room: ${code}`);
+      console.log(`[CLEANUP] Deleted inactive room: ${code}`);
     }
   }
 }, 300_000);
@@ -613,16 +639,26 @@ function sanitizeRoom(room: Room) {
     roundNumber: room.roundNumber,
     totalRounds: room.totalRounds,
     currentQuestion: room.currentQuestion,
+    currentRoundType: room.currentRoundType,
     roundStartedAt: room.roundStartedAt,
     roundDeadline: room.roundDeadline,
     matches: room.matches,
     total: room.total,
+    score: room.score,
+    streak: room.streak,
     lastResult: room.lastResult,
     lastHostChoice: room.lastHostChoice,
     lastGuestChoice: room.lastGuestChoice,
+    lastHostPrediction: room.lastHostPrediction,
+    lastGuestPrediction: room.lastGuestPrediction,
+    lastHostPredictionResult: room.lastHostPredictionResult,
+    lastGuestPredictionResult: room.lastGuestPredictionResult,
+    lastLiveReaction: room.lastLiveReaction,
     history: room.history,
     finalReport: room.finalReport,
     interruptedReason: room.interruptedReason,
+    gameMode: room.gameMode,
+    aiTone: room.aiTone,
     updatedAt: room.updatedAt,
   };
 }
@@ -635,12 +671,5 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 // ---- Start Server ----
 app.listen(PORT, () => {
-  console.log(`🎮 THIS ⚡ THAT server running on http://localhost:${PORT}`);
-  if (process.env.GEMINI_API_KEY) {
-    console.log('✨ Google Gemini AI enabled for question generation & shared analysis');
-  } else if (process.env.OPENAI_API_KEY?.startsWith('sk-')) {
-    console.log('✨ OpenAI enabled for question generation');
-  } else {
-    console.log('ℹ️  Using built-in question pool');
-  }
+  console.log(`🎮 THIS ⚡ THAT V4 server running on http://localhost:${PORT}`);
 });

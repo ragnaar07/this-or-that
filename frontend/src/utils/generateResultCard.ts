@@ -1,6 +1,6 @@
 // ============================================================
-// Client-Side Canvas Social Card Generator (1080 x 1350 PNG)
-// High-resolution, zero server upload, India-first styling
+// Client-Side Canvas Social Card Generator (1080 x 1350 PNG) — V4
+// Includes Achievements, Mind Reader Scores, Category Breakdown
 // ============================================================
 
 import type { FinalReport } from '../types/game';
@@ -42,25 +42,25 @@ export async function generateResultCardCanvas(
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FF3CAC';
   ctx.font = '900 64px "Outfit", system-ui, sans-serif';
-  ctx.fillText('THIS ', width / 2 - 130, 125);
+  ctx.fillText('THIS ', width / 2 - 130, 120);
 
   ctx.fillStyle = '#FFD600';
   ctx.font = '900 70px "Outfit", system-ui, sans-serif';
-  ctx.fillText('⚡', width / 2 - 10, 125);
+  ctx.fillText('⚡', width / 2 - 10, 120);
 
   ctx.fillStyle = '#7B2FBE';
   ctx.font = '900 64px "Outfit", system-ui, sans-serif';
-  ctx.fillText(' THAT', width / 2 + 130, 125);
+  ctx.fillText(' THAT', width / 2 + 130, 120);
 
   ctx.fillStyle = '#71717A';
   ctx.font = '800 22px "Outfit", system-ui, sans-serif';
-  ctx.fillText('SYNC UP • MATCH MINDS', width / 2, 168);
+  ctx.fillText('SYNC UP • MATCH MINDS', width / 2, 160);
 
   // --- MAIN CARD (Cream Container) ---
   const cardX = 75;
-  const cardY = 205;
+  const cardY = 190;
   const cardW = width - 150;
-  const cardH = 950;
+  const cardH = 990;
   const cardR = 32;
 
   // Shadow
@@ -79,111 +79,133 @@ export async function generateResultCardCanvas(
   // Player Names Matchup
   ctx.fillStyle = '#18181B';
   ctx.font = '900 36px "Outfit", system-ui, sans-serif';
-  ctx.fillText(`${hostName.toUpperCase()}  ×  ${(guestName || 'GUEST').toUpperCase()}`, width / 2, cardY + 65);
+  ctx.fillText(`${hostName.toUpperCase()}  ×  ${(guestName || 'GUEST').toUpperCase()}`, width / 2, cardY + 58);
 
   // Match Percentage Big Pill
   const pillW = 460;
-  const pillH = 88;
+  const pillH = 80;
   const pillX = width / 2 - pillW / 2;
-  const pillY = cardY + 100;
+  const pillY = cardY + 85;
 
   ctx.fillStyle = '#18181B';
-  roundRect(ctx, pillX + 6, pillY + 6, pillW, pillH, 44);
+  roundRect(ctx, pillX + 6, pillY + 6, pillW, pillH, 40);
   ctx.fill();
 
   ctx.fillStyle = '#00E5A0'; // Mint Green
-  roundRect(ctx, pillX, pillY, pillW, pillH, 44);
+  roundRect(ctx, pillX, pillY, pillW, pillH, 40);
   ctx.fill();
   ctx.strokeStyle = '#18181B';
   ctx.lineWidth = 4;
   ctx.stroke();
 
   ctx.fillStyle = '#18181B';
-  ctx.font = '900 50px "Outfit", system-ui, sans-serif';
-  ctx.fillText(`${report.matchPercentage}% MATCH`, width / 2, pillY + 62);
+  ctx.font = '900 48px "Outfit", system-ui, sans-serif';
+  ctx.fillText(`${report.matchPercentage}% MATCH`, width / 2, pillY + 58);
 
   // Headline
   ctx.fillStyle = '#FF3CAC';
-  ctx.font = '900 38px "Outfit", system-ui, sans-serif';
+  ctx.font = '900 34px "Outfit", system-ui, sans-serif';
   const headline = `"${report.headline}"`;
-  wrapText(ctx, headline, width / 2, cardY + 245, cardW - 80, 46);
+  wrapText(ctx, headline, width / 2, cardY + 215, cardW - 80, 42);
 
   // Score Subtitle
   ctx.fillStyle = '#71717A';
-  ctx.font = '800 24px "Outfit", system-ui, sans-serif';
+  ctx.font = '800 22px "Outfit", system-ui, sans-serif';
   const matchText = report.isPartial
-    ? `${report.completedQuestions} QUESTIONS ANSWERED (PARTIAL RESULT)`
+    ? `${report.completedQuestions} QUESTIONS COMPLETED (PARTIAL RESULT)`
     : `${Math.round((report.matchPercentage / 100) * report.completedQuestions)} / ${report.completedQuestions} QUESTIONS MATCHED`;
-  ctx.fillText(matchText, width / 2, cardY + 310);
+  ctx.fillText(matchText, width / 2, cardY + 270);
+
+  // --- ACHIEVEMENTS PILLS ROW ---
+  let curY = cardY + 315;
+  if (report.achievements && report.achievements.length > 0) {
+    const badges = report.achievements.slice(0, 3);
+    const badgeW = (cardW - 60 - (badges.length - 1) * 16) / badges.length;
+    badges.forEach((ach, i) => {
+      const bx = cardX + 30 + i * (badgeW + 16);
+      ctx.fillStyle = '#EDE9FE';
+      roundRect(ctx, bx, curY, badgeW, 46, 23);
+      ctx.fill();
+      ctx.strokeStyle = '#18181B';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = '#7B2FBE';
+      ctx.font = '800 18px "Outfit", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${ach.icon} ${ach.title.replace(/[^A-Za-z0-9 ]/g, '').trim()}`, bx + badgeW / 2, curY + 30);
+    });
+    curY += 65;
+  }
 
   // Divider line
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
   ctx.lineWidth = 3;
   ctx.setLineDash([12, 8]);
   ctx.beginPath();
-  ctx.moveTo(cardX + 40, cardY + 345);
-  ctx.lineTo(cardX + cardW - 40, cardY + 345);
+  ctx.moveTo(cardX + 40, curY);
+  ctx.lineTo(cardX + cardW - 40, curY);
   ctx.stroke();
   ctx.setLineDash([]); // reset
 
-  // Section 1: Strongest Matches / Same Brain
-  let curY = cardY + 390;
+  // Section 1: Mind Reader Score
+  if (report.predictionScore) {
+    curY += 40;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#0284C7';
+    ctx.font = '900 24px "Outfit", system-ui, sans-serif';
+    ctx.fillText('🧠 MIND READER TELEPATHY', cardX + 50, curY);
+
+    curY += 34;
+    ctx.fillStyle = '#18181B';
+    ctx.font = '700 22px "Outfit", system-ui, sans-serif';
+    curY = wrapText(ctx, report.predictionScore.summary, cardX + 50, curY, cardW - 100, 30, false);
+  }
+
+  // Section 2: Same Brain Highlights
+  curY += 25;
   ctx.textAlign = 'left';
   ctx.fillStyle = '#7B2FBE';
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
   ctx.fillText('⚡ SAME BRAIN HIGHLIGHTS', cardX + 50, curY);
 
-  curY += 40;
+  curY += 36;
   ctx.fillStyle = '#18181B';
-  ctx.font = '700 25px "Outfit", system-ui, sans-serif';
+  ctx.font = '700 22px "Outfit", system-ui, sans-serif';
   const matchHighlights = (report.strongestMatches || []).slice(0, 2);
   for (const m of matchHighlights) {
     ctx.fillText(`• ${m}`, cardX + 50, curY);
-    curY += 36;
+    curY += 32;
   }
 
-  // Section 2: Chaos Award (Funniest Difference)
-  curY += 20;
+  // Section 3: Chaos Award (Funniest Difference)
+  curY += 15;
   ctx.fillStyle = '#FF3CAC';
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
   ctx.fillText('😂 CHAOS AWARD', cardX + 50, curY);
 
-  curY += 40;
+  curY += 36;
   ctx.fillStyle = '#27272A';
-  ctx.font = 'italic 700 24px "Outfit", system-ui, sans-serif';
+  ctx.font = 'italic 700 22px "Outfit", system-ui, sans-serif';
   const chaosText = `"${report.funniestDifference || 'One plans everything, the other improvises!'}"`;
-  curY = wrapText(ctx, chaosText, cardX + 50, curY, cardW - 100, 34, false);
+  curY = wrapText(ctx, chaosText, cardX + 50, curY, cardW - 100, 30, false);
 
-  // Section 3: Plot Twist or Surprising Pattern
-  const surprise = report.mostUnexpectedMatch || (report.surprisingPatterns && report.surprisingPatterns[0]) || '';
-  if (surprise) {
-    curY += 20;
-    ctx.fillStyle = '#D97706';
-    ctx.font = '900 24px "Outfit", system-ui, sans-serif';
-    ctx.fillText('🌀 PLOT TWIST', cardX + 50, curY);
-
-    curY += 40;
-    ctx.fillStyle = '#3F3F46';
-    ctx.font = '600 23px "Outfit", system-ui, sans-serif';
-    curY = wrapText(ctx, surprise, cardX + 50, curY, cardW - 100, 32, false);
-  }
-
-  // Section 4: Final Vibe Verdict
-  curY += 20;
+  // Section 4: Final Verdict
+  curY += 15;
   ctx.fillStyle = '#18181B';
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
   ctx.fillText('🔮 THE VERDICT', cardX + 50, curY);
 
-  curY += 40;
+  curY += 34;
   ctx.fillStyle = '#3F3F46';
-  ctx.font = '600 23px "Outfit", system-ui, sans-serif';
-  wrapText(ctx, report.finalVerdict, cardX + 50, curY, cardW - 100, 32, false);
+  ctx.font = '600 21px "Outfit", system-ui, sans-serif';
+  wrapText(ctx, report.finalVerdict, cardX + 50, curY, cardW - 100, 28, false);
 
   // --- FOOTER ---
   ctx.textAlign = 'center';
   ctx.fillStyle = '#18181B';
   ctx.font = '800 24px "Outfit", system-ui, sans-serif';
-  ctx.fillText('Play THIS ⚡ THAT with your friends', width / 2, height - 75);
+  ctx.fillText('Play THIS ⚡ THAT with your friends • synq', width / 2, height - 60);
 
   return canvas;
 }
@@ -235,7 +257,7 @@ function wrapText(
     }
   }
   ctx.fillText(line.trim(), x, currentY);
-  return currentY;
+  return currentY + lineHeight;
 }
 
 export async function downloadResultCard(
@@ -280,7 +302,6 @@ export async function shareResultCard(
         }
       }
 
-      // Fallback to text-only Web Share
       if (navigator.share) {
         try {
           await navigator.share({

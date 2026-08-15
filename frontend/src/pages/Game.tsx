@@ -17,12 +17,21 @@ interface GameProps {
 export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps) {
   const [room, setRoom] = useState<RoomState>(initialRoom);
   const [myChoice, setMyChoice] = useState<string | null>(null);
+  const [myPrediction, setMyPrediction] = useState<string | null>(null);
   const [lastRoundNumber, setLastRoundNumber] = useState(initialRoom.roundNumber);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
+
+  const opponentName = session.role === 'host'
+    ? (room.guestPlayerName || 'Opponent')
+    : room.hostPlayerName;
+
+  const isPredictionRound = room.currentRoundType === 'PREDICTION';
+  const isChaosRound = room.currentRoundType === 'CHAOS';
+  const isDoublePointsRound = room.currentRoundType === 'DOUBLE_POINTS';
 
   // Check for game completion / interruption
   useEffect(() => {
@@ -32,15 +41,16 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
     }
   }, [room.status, room, onGameFinish]);
 
-  // Reset choice when round changes
+  // Reset choices when round changes
   useEffect(() => {
     if (room.roundNumber !== lastRoundNumber) {
-      console.log(`[GAME] Round changed from ${lastRoundNumber} to ${room.roundNumber}`);
+      console.log(`[GAME] Round changed from ${lastRoundNumber} to ${room.roundNumber} (${room.currentRoundType})`);
       setMyChoice(null);
+      setMyPrediction(null);
       setLastRoundNumber(room.roundNumber);
       nextRoundRequested.current = false;
     }
-  }, [room.roundNumber, lastRoundNumber]);
+  }, [room.roundNumber, room.currentRoundType, lastRoundNumber]);
 
   // Polling — 700ms sequential polling for near-realtime feel
   const pollRoom = useCallback(async () => {
@@ -62,7 +72,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
 
   usePolling(pollRoom, 700, !isLeaving && room.status !== 'FINISHED' && room.status !== 'INTERRUPTED');
 
-  // Host auto-advances after reveal period (2.2s)
+  // Host auto-advances after reveal period (2.5s for prediction reading)
   useEffect(() => {
     if (
       room.status === 'REVEALING' &&
@@ -71,8 +81,9 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
       !isLeaving
     ) {
       nextRoundRequested.current = true;
-      console.log(`[GAME:HOST] Round ${room.roundNumber}/${room.totalRounds} reveal active. Advancing in 2.3s...`);
+      console.log(`[GAME:HOST] Round ${room.roundNumber}/${room.totalRounds} reveal active. Advancing in 2.6s...`);
 
+      const delay = isPredictionRound ? 3000 : 2500;
       const timer = setTimeout(async () => {
         try {
           const res = await api.nextRound(session.roomCode, session.playerId);
@@ -83,18 +94,26 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
           console.error('[GAME:HOST] Failed to advance round:', err);
           nextRoundRequested.current = false;
         }
-      }, 2300);
+      }, delay);
 
       return () => clearTimeout(timer);
     }
-  }, [room.status, room.roundNumber, room.totalRounds, session.role, session.roomCode, session.playerId, isLeaving]);
+  }, [room.status, room.roundNumber, room.totalRounds, isPredictionRound, session.role, session.roomCode, session.playerId, isLeaving]);
 
-  async function handleChoice(choice: string) {
-    if (myChoice !== null || room.status !== 'PLAYING' || !room.currentQuestion) return;
+  async function handleOptionClick(choice: string) {
+    if (room.status !== 'PLAYING' || !room.currentQuestion) return;
 
-    // Optimistic local update
+    // In Prediction rounds: Step 1 = Predict opponent choice
+    if (isPredictionRound && myPrediction === null) {
+      setMyPrediction(choice);
+      console.log(`[GAME] Predicted for ${opponentName}: "${choice}"`);
+      return;
+    }
+
+    // Step 2 (or normal rounds): Select own choice
+    if (myChoice !== null) return;
     setMyChoice(choice);
-    console.log(`[GAME] Selected: "${choice}" for round ${room.roundNumber}`);
+    console.log(`[GAME] Selected own: "${choice}" (Prediction: "${myPrediction || 'none'}")`);
 
     try {
       const res = await api.submitAnswer(
@@ -102,11 +121,12 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
         session.playerId,
         session.role,
         room.roundNumber,
-        choice
+        choice,
+        myPrediction ?? undefined
       );
 
       if (res.error) {
-        console.warn(`[GAME] Submit answer response notice:`, res.error);
+        console.warn(`[GAME] Submit answer notice:`, res.error);
       }
 
       if (res.room) {
@@ -145,6 +165,18 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
   const q = room.currentQuestion;
   const hasAnswered = myChoice !== null;
   const isRevealing = room.status === 'REVEALING';
+
+  // Dynamic Prompt based on prediction step
+  let promptText = 'PICK ONE — FAST!';
+  if (hasAnswered) {
+    promptText = 'YOUR PICK IS LOCKED!';
+  } else if (isPredictionRound) {
+    if (myPrediction === null) {
+      promptText = `STEP 1: WHAT WILL ${opponentName.toUpperCase()} PICK? 🤔`;
+    } else {
+      promptText = 'STEP 2: NOW PICK YOUR OWN ANSWER! 🎯';
+    }
+  }
 
   return (
     <>
@@ -193,6 +225,12 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
           guestChoice={room.lastGuestChoice}
           hostName={room.hostPlayerName}
           guestName={room.guestPlayerName}
+          roundType={room.currentRoundType}
+          liveReaction={room.lastLiveReaction}
+          hostPrediction={room.lastHostPrediction}
+          guestPrediction={room.lastGuestPrediction}
+          hostPredictionResult={room.lastHostPredictionResult}
+          guestPredictionResult={room.lastGuestPredictionResult}
         />
       )}
 
@@ -200,6 +238,23 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
       <main className="game-screen">
         {q ? (
           <>
+            {/* Special Round Banners */}
+            {isChaosRound && (
+              <div className="game-round-badge game-round-badge--chaos">
+                ⚠️ CHAOS ROUND
+              </div>
+            )}
+            {isPredictionRound && (
+              <div className="game-round-badge game-round-badge--prediction">
+                🧠 MIND READER PREDICTION ROUND
+              </div>
+            )}
+            {isDoublePointsRound && (
+              <div className="game-round-badge game-round-badge--double">
+                🔥 DOUBLE POINTS ROUND (2X)
+              </div>
+            )}
+
             {/* Round & Category header */}
             <div className="question-header">
               <div className="round-progress-pill">
@@ -208,8 +263,8 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               {q.category && (
                 <div className="question-category">{q.category}</div>
               )}
-              <div className="question-prompt">
-                {hasAnswered ? 'YOUR PICK IS IN!' : 'PICK ONE — FAST!'}
+              <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
+                {promptText}
               </div>
             </div>
 
@@ -218,7 +273,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               <OptionButton
                 label={q.optionA}
                 variant="a"
-                onClick={() => handleChoice(q.optionA)}
+                onClick={() => handleOptionClick(q.optionA)}
                 disabled={hasAnswered || isRevealing}
                 selected={myChoice === q.optionA}
                 dimmed={hasAnswered && myChoice !== q.optionA}
@@ -229,12 +284,19 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               <OptionButton
                 label={q.optionB}
                 variant="b"
-                onClick={() => handleChoice(q.optionB)}
+                onClick={() => handleOptionClick(q.optionB)}
                 disabled={hasAnswered || isRevealing}
                 selected={myChoice === q.optionB}
                 dimmed={hasAnswered && myChoice !== q.optionB}
               />
             </div>
+
+            {/* Prediction Step Indicator Pill */}
+            {isPredictionRound && !hasAnswered && myPrediction !== null && (
+              <div className="prediction-locked-pill">
+                ✓ Predicted for {opponentName}: <strong>{myPrediction}</strong>
+              </div>
+            )}
 
             {/* Countdown timer */}
             {!isRevealing && (
@@ -245,7 +307,6 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
             )}
           </>
         ) : (
-          // Loading next question
           <div style={{ textAlign: 'center' }}>
             <div className="spinner" />
             <p style={{ marginTop: 16, fontSize: '0.8rem', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>

@@ -1647,5 +1647,392 @@ body {
   }
 }
 
+/* ============================================================
+   V4 ULTIMATE ENGAGEMENT STYLES
+============================================================ */
+
+/* Special Round Badges on Game Screen */
+.game-round-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 8px;
+  animation: badge-pulse 1.6s ease-in-out infinite alternate;
+}
+
+.game-round-badge--chaos {
+  background: #ffedd5;
+  color: #c2410c;
+  border-color: #ea580c;
+}
+
+.game-round-badge--prediction {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #0284c7;
+}
+
+.game-round-badge--double {
+  background: #fef08a;
+  color: #854d0e;
+  border-color: #ca8a04;
+}
+
+@keyframes badge-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.04); }
+}
+
+.question-prompt--prediction {
+  color: var(--color-violet) !important;
+}
+
+.prediction-locked-pill {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1e40af;
+  border: 2px solid #3b82f6;
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 10px;
+  box-shadow: 0 2px 0 #1e3a8a;
+  animation: logo-pop-in 0.25s ease-out;
+}
+
+/* Reveal Screen Special Badges */
+.reveal-double-badge {
+  display: inline-block;
+  background: #fde047;
+  color: #854d0e;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 6px 18px;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  box-shadow: 0 4px 0 var(--color-border);
+  margin-bottom: 12px;
+}
+
+.reveal-chaos-badge {
+  display: inline-block;
+  background: #fed7aa;
+  color: #9a3412;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 6px 18px;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  box-shadow: 0 4px 0 var(--color-border);
+  margin-bottom: 12px;
+}
+
+.reveal-live-reaction {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  max-width: 440px;
+  margin: 6px auto 14px;
+  line-height: 1.35;
+}
+
+/* Reveal Predictions Card */
+.reveal-predictions-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin: 12px auto;
+  max-width: 420px;
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
+}
+
+.reveal-predictions-title {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #0369a1;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.reveal-predictions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reveal-pred-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.pred-who {
+  color: var(--color-text-muted);
+}
+
+.pred-val {
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.pred-status {
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.pred-status--correct {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pred-status--wrong {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* --- Suspenseful Reveal Intro Sequence --- */
+.reveal-intro-card {
+  width: 100%;
+  background: var(--color-card);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 36px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-height: 320px;
+  justify-content: center;
+  animation: logo-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.reveal-step-indicator {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--color-violet);
+  text-transform: uppercase;
+}
+
+.reveal-step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.reveal-step-emoji {
+  font-size: 3.5rem;
+  animation: badge-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.reveal-step-title {
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.reveal-step-sub {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  max-width: 380px;
+  line-height: 1.45;
+}
+
+.reveal-skip-btn {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  padding: 6px 14px;
+}
+
+/* --- Achievements Grid --- */
+.result-card--achievements {
+  background: var(--color-card);
+}
+
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  box-shadow: 0 2px 0 var(--color-border);
+}
+
+.achievement-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.achievement-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.achievement-title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--color-text);
+  letter-spacing: 0.5px;
+}
+
+.achievement-desc {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
+/* --- Mind Reader Score Card --- */
+.result-card--mindreader {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+.result-card--mindreader .result-card-title {
+  color: #0369a1;
+}
+
+.mindreader-score-pill {
+  display: inline-block;
+  background: #ffffff;
+  border: 2px solid #0284c7;
+  border-radius: var(--radius-full);
+  padding: 6px 16px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0369a1;
+  margin-bottom: 8px;
+}
+
+.mindreader-summary {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* --- Challenge Friend Button --- */
+.btn--challenge {
+  background: #f97316;
+  color: #ffffff;
+  box-shadow: 0 4px 0 #c2410c;
+}
+
+.btn--challenge:hover {
+  background: #ea580c;
+  box-shadow: 0 6px 0 #c2410c;
+}
+
+/* --- Mode Picker Modal --- */
+.play-again-box {
+  width: 100%;
+  position: relative;
+  margin-top: 6px;
+}
+
+.mode-picker-modal {
+  margin-top: 12px;
+  background: #ffffff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 18px 16px;
+  text-align: left;
+  animation: logo-pop-in 0.25s ease-out;
+}
+
+.mode-picker-title {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.mode-chips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mode-chip {
+  background: #f8fafc;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.1s, background-color 0.15s;
+}
+
+.mode-chip:hover {
+  background: #f1f5f9;
+  transform: translateY(-2px);
+}
+
+.mode-chip--active {
+  background: #fef08a;
+  border-color: #ca8a04;
+}
+
+.mode-chip-name {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.mode-chip-desc {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+  .mode-chips-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
 

@@ -1,5 +1,5 @@
 // ============================================================
-// API Service — All server communication
+// API Service — All server communication (V4)
 // ============================================================
 
 import type { RoomState, PlayerRole } from '../types/game';
@@ -36,10 +36,10 @@ async function request<T>(
 }
 
 export const api = {
-  async createRoom(playerName: string) {
+  async createRoom(playerName: string, totalRounds = 20, gameMode = 'RANDOM', aiTone = 'fun') {
     return request('/api/rooms', {
       method: 'POST',
-      body: JSON.stringify({ playerName }),
+      body: JSON.stringify({ playerName, totalRounds, gameMode, aiTone }),
     });
   },
 
@@ -59,11 +59,12 @@ export const api = {
     playerId: string,
     role: PlayerRole,
     roundNumber: number,
-    choice: string
+    choice: string,
+    prediction?: string
   ) {
     return request(`/api/rooms/${code}/answer`, {
       method: 'POST',
-      body: JSON.stringify({ playerId, role, roundNumber, choice }),
+      body: JSON.stringify({ playerId, role, roundNumber, choice, prediction }),
     });
   },
 
