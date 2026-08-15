@@ -8,9 +8,10 @@ interface HomeProps {
   onEnterGame: (session: PlayerSession, room: RoomState) => void;
   onEnterLobby: (session: PlayerSession) => void;
   onOpenAbout: () => void;
+  onOpenHowToPlay: () => void;
 }
 
-export function Home({ onEnterGame, onEnterLobby, onOpenAbout }: HomeProps) {
+export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }: HomeProps) {
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
@@ -87,15 +88,26 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout }: HomeProps) {
 
   return (
     <div className="app-wrapper">
-      {/* Top-right floating About Us pill */}
-      <button
-        className="top-about-btn"
-        onClick={onOpenAbout}
-        aria-label="About THIS THAT and SYNQ"
-        id="top-about-btn"
-      >
-        💡 ABOUT US
-      </button>
+      {/* Top-right floating buttons */}
+      <div className="top-nav-actions">
+        <button
+          className="top-nav-btn top-nav-btn--how"
+          onClick={onOpenHowToPlay}
+          aria-label="How to play THIS THAT"
+          id="top-howtoplay-btn"
+        >
+          🎮 HOW TO PLAY
+        </button>
+
+        <button
+          className="top-nav-btn top-nav-btn--about"
+          onClick={onOpenAbout}
+          aria-label="About THIS THAT and SYNQ"
+          id="top-about-btn"
+        >
+          💡 ABOUT US
+        </button>
+      </div>
 
       <div className="screen">
         <Brand />
@@ -180,14 +192,22 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout }: HomeProps) {
           {error && <ErrorMessage message={error} />}
         </div>
 
-        {/* Footer About Link */}
+        {/* Footer Navigation Links */}
         <div className="home-footer">
+          <button
+            className="footer-about-link"
+            onClick={onOpenHowToPlay}
+            id="footer-howtoplay-link"
+          >
+            🎮 <strong>How to Play</strong>
+          </button>
+          <span style={{ color: 'var(--color-text-muted)', margin: '0 4px' }}>•</span>
           <button
             className="footer-about-link"
             onClick={onOpenAbout}
             id="footer-about-link"
           >
-            ⚡ How it works & AI Engine • <strong>About Us</strong>
+            💡 <strong>About Us</strong>
           </button>
         </div>
       </div>

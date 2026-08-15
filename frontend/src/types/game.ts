@@ -119,7 +119,7 @@ export interface RoomState {
   updatedAt: number;
 }
 
-export type AppScreen = 'HOME' | 'LOBBY' | 'GAME' | 'RESULT' | 'ABOUT' | 'ERROR';
+export type AppScreen = 'HOME' | 'LOBBY' | 'GAME' | 'RESULT' | 'ABOUT' | 'HOW_TO_PLAY' | 'ERROR';
 
 export interface PlayerSession {
   playerId: string;

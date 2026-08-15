@@ -2033,6 +2033,161 @@ body {
   }
 }
 
+/* ============================================================
+   TOP NAVIGATION ACTIONS (HOW TO PLAY + ABOUT US)
+============================================================ */
+.top-nav-actions {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  animation: logo-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.top-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 8px 14px;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--color-text);
+  box-shadow: 0 4px 0 var(--color-border), 0 6px 16px rgba(26, 0, 48, 0.08);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background-color 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.top-nav-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--color-border), 0 10px 20px rgba(26, 0, 48, 0.12);
+  background: #ffffff;
+}
+
+.top-nav-btn--how:hover {
+  color: var(--color-violet);
+}
+
+.top-nav-btn--about:hover {
+  color: var(--color-pink);
+}
+
+.top-nav-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-border);
+}
+
+/* ============================================================
+   HOW TO PLAY PAGE STYLING
+============================================================ */
+.howtoplay-screen-container {
+  max-width: 540px;
+  padding-top: 24px;
+  padding-bottom: 60px;
+  gap: var(--gap-md);
+}
+
+.howtoplay-step-card {
+  background: var(--color-card);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px 20px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.step-number-badge {
+  display: inline-block;
+  align-self: flex-start;
+  background: #ede9fe;
+  color: var(--color-violet-dark);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.step-number-badge--pred {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.step-number-badge--chaos {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.howtoplay-sample-box {
+  background: #ffffff;
+  border: 2px dashed rgba(26, 0, 48, 0.25);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sample-q {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.sample-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sample-opt {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+}
+
+.sample-opt--a {
+  background: #ffe4f3;
+  color: var(--color-pink-dark);
+}
+
+.sample-opt--b {
+  background: #ede9fe;
+  color: var(--color-violet-dark);
+}
+
+@media (max-width: 480px) {
+  .top-nav-actions {
+    top: 12px;
+    right: 12px;
+    gap: 4px;
+  }
+  .top-nav-btn {
+    padding: 5px 9px;
+    font-size: 0.68rem;
+  }
+}
+
+
 
 
 

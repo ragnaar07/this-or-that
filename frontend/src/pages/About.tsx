@@ -2,9 +2,10 @@ import { SynqLogo } from '../components/SynqLogo';
 
 interface AboutProps {
   onBack: () => void;
+  onOpenHowToPlay?: () => void;
 }
 
-export function About({ onBack }: AboutProps) {
+export function About({ onBack, onOpenHowToPlay }: AboutProps) {
   return (
     <div className="app-wrapper">
       <div className="screen about-screen-container">
@@ -42,13 +43,13 @@ export function About({ onBack }: AboutProps) {
           {/* Card 1: AI Question Engine */}
           <div className="about-feature-card">
             <div className="about-card-badge badge--pink">⚡ NO FIXED QUESTIONS</div>
-            <h2 className="about-card-heading">Real-Time Google Gemini AI Engine</h2>
+            <h2 className="about-card-heading">Real-Time AI-Powered Question Engine</h2>
             <p className="about-card-text">
-              Unlike ordinary quiz apps with static, repetitive databases, <strong>THIS ⚡ THAT</strong> generates fresh, dynamic, and unpredictable choices on the fly for every single round. You will virtually never see the same game twice.
+              Unlike ordinary quiz apps with static, repetitive databases, <strong>THIS ⚡ THAT</strong> uses an advanced AI engine to dynamically generate fresh, contextual, and unpredictable choices on the fly for every single round. You will virtually never see the same game twice.
             </p>
             <div className="about-pill-row">
               <span className="about-sub-pill">Dynamic 4-Tier Curve</span>
-              <span className="about-sub-pill">Real-time Prompting</span>
+              <span className="about-sub-pill">Real-Time AI Prompting</span>
               <span className="about-sub-pill">Zero Repetition</span>
             </div>
           </div>
@@ -62,6 +63,7 @@ export function About({ onBack }: AboutProps) {
             </p>
             <ul className="about-bullets">
               <li><strong>Food & Chai:</strong> Tapri chai vs cafe coffee, late-night Maggi vs Swiggy, biryani preferences.</li>
+              <li><strong>Bollywood & Cricket:</strong> Classic romance vs thriller, last over stress, stadium vs sofa.</li>
               <li><strong>Social Quirks:</strong> Shaadi dance floor vs food corner, "5 min mein aa raha hoon" mental math.</li>
               <li><strong>Digital Habits:</strong> 3-min voice notes vs "text kar", UPI processing panic, 2 AM reel spirals.</li>
               <li><strong>Life & Ambition:</strong> PG vs home comfort, Goa squad trip vs solo Himachal trek, saving vs luxury travel.</li>
@@ -70,10 +72,10 @@ export function About({ onBack }: AboutProps) {
 
           {/* Card 3: Grounded AI Insights */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--mint">🧠 GROUNDED ENTERTAINMENT INSIGHTS</div>
-            <h2 className="about-card-heading">Real Behavioral Patterns, Not Horoscopes</h2>
+            <div className="about-card-badge badge--mint">🧠 GROUNDED BEHAVIORAL INSIGHTS</div>
+            <h2 className="about-card-heading">Real Data-Driven Patterns, Not Horoscopes</h2>
             <p className="about-card-text">
-              Our analysis engine evaluates mathematical category sync rates, identifies hilarious contradictions (e.g. <em>preferring to save money but picking 5-star luxury trips</em>), and awards playful titles like the <strong>Chaos Award 😂</strong> and <strong>Same Brain Highlights</strong>.
+              Our AI analysis engine evaluates mathematical category sync rates, identifies hilarious contradictions (e.g. <em>preferring to save money but picking 5-star luxury trips</em>), and awards playful titles like the <strong>Chaos Award 😂</strong>, <strong>Mind Reader Score</strong>, and <strong>Same Brain Highlights</strong>.
             </p>
           </div>
 
@@ -110,8 +112,18 @@ export function About({ onBack }: AboutProps) {
           🔒 <strong>Privacy First:</strong> We do not track personal data, store sensitive info, or make clinical psychological claims. This game is built 100% for pure entertainment, friendly debates, and laughter.
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Buttons */}
         <div className="about-cta-container">
+          {onOpenHowToPlay && (
+            <button
+              className="btn btn--secondary"
+              onClick={onOpenHowToPlay}
+              style={{ marginBottom: 10 }}
+              id="about-howtoplay-btn"
+            >
+              🎮 VIEW HOW TO PLAY GUIDE
+            </button>
+          )}
           <button
             className="btn btn--pink"
             onClick={onBack}

@@ -4,6 +4,7 @@ import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { Result } from './pages/Result';
 import { About } from './pages/About';
+import { HowToPlay } from './pages/HowToPlay';
 import { TopBrandBadge } from './components/TopBrandBadge';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
 
@@ -37,12 +38,19 @@ export default function App() {
 
   return (
     <>
-      {screen !== 'GAME' && screen !== 'ABOUT' && (
+      {screen !== 'GAME' && screen !== 'ABOUT' && screen !== 'HOW_TO_PLAY' && (
         <TopBrandBadge onClick={screen !== 'HOME' ? goHome : undefined} />
       )}
 
       {screen === 'ABOUT' && (
-        <About onBack={goHome} />
+        <About
+          onBack={goHome}
+          onOpenHowToPlay={() => setScreen('HOW_TO_PLAY')}
+        />
+      )}
+
+      {screen === 'HOW_TO_PLAY' && (
+        <HowToPlay onBack={goHome} />
       )}
 
       {screen === 'HOME' && (
@@ -55,6 +63,7 @@ export default function App() {
             setScreen('GAME');
           }}
           onOpenAbout={() => setScreen('ABOUT')}
+          onOpenHowToPlay={() => setScreen('HOW_TO_PLAY')}
         />
       )}
 
