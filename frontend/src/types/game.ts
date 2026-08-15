@@ -75,7 +75,7 @@ export interface RoomState {
   updatedAt: number;
 }
 
-export type AppScreen = 'HOME' | 'LOBBY' | 'GAME' | 'RESULT' | 'ERROR';
+export type AppScreen = 'HOME' | 'LOBBY' | 'GAME' | 'RESULT' | 'ABOUT' | 'ERROR';
 
 export interface PlayerSession {
   playerId: string;

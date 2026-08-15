@@ -7,9 +7,10 @@ import type { PlayerSession, RoomState } from '../types/game';
 interface HomeProps {
   onEnterGame: (session: PlayerSession, room: RoomState) => void;
   onEnterLobby: (session: PlayerSession) => void;
+  onOpenAbout: () => void;
 }
 
-export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
+export function Home({ onEnterGame, onEnterLobby, onOpenAbout }: HomeProps) {
   const [playerName, setPlayerName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [error, setError] = useState('');
@@ -86,6 +87,16 @@ export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
 
   return (
     <div className="app-wrapper">
+      {/* Top-right floating About Us pill */}
+      <button
+        className="top-about-btn"
+        onClick={onOpenAbout}
+        aria-label="About THIS THAT and SYNQ"
+        id="top-about-btn"
+      >
+        💡 ABOUT US
+      </button>
+
       <div className="screen">
         <Brand />
 
@@ -167,6 +178,17 @@ export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
 
           {/* Inline error */}
           {error && <ErrorMessage message={error} />}
+        </div>
+
+        {/* Footer About Link */}
+        <div className="home-footer">
+          <button
+            className="footer-about-link"
+            onClick={onOpenAbout}
+            id="footer-about-link"
+          >
+            ⚡ How it works & AI Engine • <strong>About Us</strong>
+          </button>
         </div>
       </div>
     </div>

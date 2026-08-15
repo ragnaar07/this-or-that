@@ -1351,4 +1351,301 @@ body {
   }
 }
 
+/* ============================================================
+   ABOUT US PAGE & TOP ABOUT BUTTON
+============================================================ */
+
+/* Top-Right Floating About Button */
+.top-about-btn {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 8px 16px;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-text);
+  box-shadow: 0 4px 0 var(--color-border), 0 6px 16px rgba(26, 0, 48, 0.08);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background-color 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  animation: logo-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.top-about-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--color-border), 0 10px 20px rgba(26, 0, 48, 0.12);
+  background: #ffffff;
+  color: var(--color-pink);
+}
+
+.top-about-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-border);
+}
+
+/* Home Footer Link */
+.home-footer {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.footer-about-link {
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, transform 0.1s;
+}
+
+.footer-about-link:hover {
+  color: var(--color-text);
+  text-decoration: underline;
+}
+
+/* About Screen Container */
+.about-screen-container {
+  max-width: 540px;
+  padding-top: 24px;
+  padding-bottom: 60px;
+  gap: var(--gap-md);
+}
+
+.about-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.btn-back-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 8px 18px;
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text);
+  box-shadow: 0 4px 0 var(--color-border);
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.btn-back-pill:hover {
+  background: #ffffff;
+  color: var(--color-pink);
+}
+
+.btn-back-pill:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--color-border);
+}
+
+.about-header-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* About Hero Card */
+.about-hero-card {
+  width: 100%;
+  background: var(--color-card);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 32px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-hero-title {
+  font-size: clamp(2rem, 7vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.about-hero-tagline {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  max-width: 400px;
+}
+
+.about-quote-box {
+  margin-top: 8px;
+  background: #fff;
+  border: 2px dashed rgba(123, 47, 190, 0.35);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* About Cards List */
+.about-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  width: 100%;
+}
+
+.about-feature-card {
+  background: var(--color-card);
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 24px 20px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-card-badge {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1.5px solid var(--color-border);
+}
+
+.badge--pink {
+  background: #ffe4f3;
+  color: var(--color-pink-dark);
+}
+
+.badge--violet {
+  background: #ede9fe;
+  color: var(--color-violet-dark);
+}
+
+.badge--mint {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge--gold {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge--orange {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.about-card-heading {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--color-text);
+  letter-spacing: -0.3px;
+  margin-top: 4px;
+}
+
+.about-card-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.about-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.about-sub-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #ffffff;
+  border: 1.5px solid var(--color-border);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+}
+
+.about-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.about-bullets li strong {
+  color: var(--color-text);
+}
+
+/* Privacy Note */
+.about-privacy-note {
+  background: #fff;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+}
+
+/* CTA */
+.about-cta-container {
+  width: 100%;
+  margin-top: 6px;
+}
+
+@media (max-width: 480px) {
+  .top-about-btn {
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
+  }
+}
+
+
 

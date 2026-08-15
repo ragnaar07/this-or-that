@@ -3,6 +3,7 @@ import { Home } from './pages/Home';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
 import { Result } from './pages/Result';
+import { About } from './pages/About';
 import { TopBrandBadge } from './components/TopBrandBadge';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
 
@@ -36,8 +37,12 @@ export default function App() {
 
   return (
     <>
-      {screen !== 'GAME' && (
+      {screen !== 'GAME' && screen !== 'ABOUT' && (
         <TopBrandBadge onClick={screen !== 'HOME' ? goHome : undefined} />
+      )}
+
+      {screen === 'ABOUT' && (
+        <About onBack={goHome} />
       )}
 
       {screen === 'HOME' && (
@@ -49,6 +54,7 @@ export default function App() {
             setRoomState(room);
             setScreen('GAME');
           }}
+          onOpenAbout={() => setScreen('ABOUT')}
         />
       )}
 
