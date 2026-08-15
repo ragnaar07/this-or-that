@@ -239,19 +239,29 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
         {q ? (
           <>
             {/* Special Round Banners */}
-            {isChaosRound && (
+            {isChaosRound ? (
               <div className="game-round-badge game-round-badge--chaos">
-                ⚠️ CHAOS ROUND
+                ⚠️ CHAOS ROUND (16s)
               </div>
-            )}
-            {isPredictionRound && (
+            ) : isPredictionRound ? (
               <div className="game-round-badge game-round-badge--prediction">
-                🧠 MIND READER PREDICTION ROUND
+                🧠 MIND READER PREDICTION ROUND (16s)
               </div>
-            )}
-            {isDoublePointsRound && (
+            ) : isDoublePointsRound ? (
               <div className="game-round-badge game-round-badge--double">
                 🔥 DOUBLE POINTS ROUND (2X)
+              </div>
+            ) : q.type === 'CURRENT' || q.isCurrent ? (
+              <div className="game-round-badge game-round-badge--current">
+                📰 CURRENT INDIA DEBATE (16s)
+              </div>
+            ) : q.format === 'QUICK' || (!q.scenario && (room.currentTimeLimit === 10 || q.timeLimit === 10)) ? (
+              <div className="game-round-badge game-round-badge--quick">
+                ⚡ QUICK PICK (10s)
+              </div>
+            ) : (
+              <div className="game-round-badge game-round-badge--situational">
+                🧠 THINK FAST (16s)
               </div>
             )}
 
@@ -280,7 +290,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
             </div>
 
             {/* Option buttons */}
-            <div className="options-container">
+            <div className={`options-container ${q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? 'options-container--quick' : ''}`}>
               <OptionButton
                 label={q.optionA}
                 variant="a"
@@ -290,7 +300,9 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
                 dimmed={hasAnswered && myChoice !== q.optionA}
               />
 
-              <div className="options-or" aria-hidden="true">OR</div>
+              <div className="options-or" aria-hidden="true">
+                {q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? '⚡' : 'OR'}
+              </div>
 
               <OptionButton
                 label={q.optionB}
@@ -314,6 +326,8 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               <Countdown
                 deadline={room.roundDeadline}
                 hasAnswered={hasAnswered}
+                timeLimit={room.currentTimeLimit || q.timeLimit || (q.format === 'QUICK' ? 10 : 16)}
+                format={q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? 'QUICK' : 'SITUATIONAL'}
               />
             )}
           </>

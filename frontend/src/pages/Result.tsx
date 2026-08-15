@@ -235,6 +235,28 @@ export function Result({ room, onPlayAgain }: ResultProps) {
               </div>
             )}
 
+            {/* Instinct vs Strategy Comparison Card */}
+            {(report?.instinctMatchPercentage !== undefined || report?.strategicMatchPercentage !== undefined) && (
+              <div className="result-card result-card--instinct">
+                <div className="result-card-title">⚡ FAST INSTINCT VS 🧠 DEEP STRATEGY</div>
+                <div className="instinct-strategy-grid">
+                  <div className="instinct-stat-box">
+                    <div className="instinct-stat-label">⚡ 10s Quick Picks</div>
+                    <div className="instinct-stat-val">{report?.instinctMatchPercentage ?? matchPct}%</div>
+                  </div>
+                  <div className="instinct-stat-box instinct-stat-box--strategy">
+                    <div className="instinct-stat-label">🧠 16s Situational</div>
+                    <div className="instinct-stat-val">{report?.strategicMatchPercentage ?? matchPct}%</div>
+                  </div>
+                </div>
+                {report?.instinctVsStrategyInsight && (
+                  <div className="instinct-strategy-insight">
+                    {report.instinctVsStrategyInsight}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Category Breakdown */}
             {report?.categoryScores && report.categoryScores.length > 0 && (
               <div className="result-card result-card--categories">

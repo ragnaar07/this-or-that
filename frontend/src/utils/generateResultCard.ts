@@ -135,7 +135,35 @@ export async function generateResultCardCanvas(
       ctx.textAlign = 'center';
       ctx.fillText(`${ach.icon} ${ach.title.replace(/[^A-Za-z0-9 ]/g, '').trim()}`, bx + badgeW / 2, curY + 30);
     });
-    curY += 65;
+    curY += 60;
+  }
+
+  // --- INSTINCT VS STRATEGY PILL ROW ---
+  if (report.instinctMatchPercentage !== undefined && report.strategicMatchPercentage !== undefined) {
+    const halfW = (cardW - 76) / 2;
+    // Box 1: 10s Instinct
+    ctx.fillStyle = '#FEF08A';
+    roundRect(ctx, cardX + 30, curY, halfW, 42, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#18181B';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#18181B';
+    ctx.font = '800 17px "Outfit", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⚡ 10s Instinct: ${report.instinctMatchPercentage}%`, cardX + 30 + halfW / 2, curY + 27);
+
+    // Box 2: 16s Strategy
+    ctx.fillStyle = '#E0F2FE';
+    roundRect(ctx, cardX + 30 + halfW + 16, curY, halfW, 42, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#18181B';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#0369A1';
+    ctx.fillText(`🧠 16s Strategy: ${report.strategicMatchPercentage}%`, cardX + 30 + halfW + 16 + halfW / 2, curY + 27);
+
+    curY += 56;
   }
 
   // Divider line
@@ -150,13 +178,13 @@ export async function generateResultCardCanvas(
 
   // Section 1: Mind Reader Score
   if (report.predictionScore) {
-    curY += 40;
+    curY += 36;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#0284C7';
     ctx.font = '900 24px "Outfit", system-ui, sans-serif';
     ctx.fillText('🧠 MIND READER TELEPATHY', cardX + 50, curY);
 
-    curY += 34;
+    curY += 32;
     ctx.fillStyle = '#18181B';
     ctx.font = '700 22px "Outfit", system-ui, sans-serif';
     curY = wrapText(ctx, report.predictionScore.summary, cardX + 50, curY, cardW - 100, 30, false);

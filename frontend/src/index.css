@@ -2220,6 +2220,101 @@ body {
   }
 }
 
+/* ============================================================
+   V5 QUESTION FORMAT BADGES & QUICK TYPOGRAPHY
+============================================================ */
+.game-round-badge--quick {
+  background: #fef08a;
+  color: #854d0e;
+  border-color: #ca8a04;
+}
+
+.game-round-badge--situational {
+  background: #ede9fe;
+  color: var(--color-violet-dark);
+  border-color: var(--color-violet);
+}
+
+.game-round-badge--current {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-color: #6366f1;
+}
+
+.options-container--quick .option-btn {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  padding: 22px 18px;
+}
+
+.countdown-bar-fill.expired {
+  background: var(--color-nomatch);
+}
+
+.countdown-number.expired {
+  color: var(--color-nomatch);
+}
+
+/* ============================================================
+   INSTINCT VS STRATEGY BREAKDOWN CARD
+============================================================ */
+.result-card--instinct {
+  background: #ffffff;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.instinct-strategy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.instinct-stat-box {
+  background: #fef08a;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.instinct-stat-box--strategy {
+  background: #e0f2fe;
+}
+
+.instinct-stat-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.instinct-stat-val {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--color-text);
+  margin-top: 4px;
+}
+
+.instinct-strategy-insight {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.45;
+  background: #f8fafc;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  border: 1px dashed rgba(26, 0, 48, 0.2);
+}
+
+
 
 
 

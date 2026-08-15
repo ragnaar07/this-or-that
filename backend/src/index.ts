@@ -21,7 +21,7 @@ import {
   clearRoundAnswers,
   getAllRooms,
 } from './store';
-import { Room, Answer, RoundHistoryItem, RoundType } from './types';
+import { Room, Answer, RoundHistoryItem, RoundType, QuestionType, QuestionFormat } from './types';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -109,6 +109,8 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       totalRounds,
       currentQuestion: null,
       currentRoundType: 'NORMAL',
+      currentTimeLimit: 10,
+      currentQuestionFormat: 'QUICK',
       roundStartedAt: null,
       roundDeadline: null,
       matches: 0,
@@ -175,6 +177,8 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     const roundType = getRoundTypeForRound(1);
     const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], 1, roundType, room.gameMode);
     const now = Date.now();
+    const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
+    const durationMs = timeLimit * 1000;
 
     const updatedRoom: Room = {
       ...room,
@@ -185,15 +189,17 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       roundNumber: 1,
       currentQuestion: question,
       currentRoundType: roundType,
+      currentTimeLimit: timeLimit,
+      currentQuestionFormat: question.format || 'QUICK',
       roundStartedAt: now,
-      roundDeadline: now + ROUND_DURATION_MS,
+      roundDeadline: now + durationMs,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
       recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
       updatedAt: now,
     };
 
     setRoom(updatedRoom);
-    console.log(`[GUEST JOINED] Room ${code}: "${playerName}" joined! Round 1 (${roundType}): "${question.optionA}" vs "${question.optionB}"`);
+    console.log(`[GUEST JOINED] Room ${code}: "${playerName}" joined! Round 1 (${roundType}, ${question.format || 'QUICK'} - ${timeLimit}s): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({
       success: true,
@@ -379,6 +385,8 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
     const nextRoundType = getRoundTypeForRound(nextRound);
     const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], nextRound, nextRoundType, room.gameMode);
     const now = Date.now();
+    const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
+    const durationMs = timeLimit * 1000;
 
     clearRoundAnswers(code, room.roundNumber);
 
@@ -388,15 +396,17 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       roundNumber: nextRound,
       currentQuestion: question,
       currentRoundType: nextRoundType,
+      currentTimeLimit: timeLimit,
+      currentQuestionFormat: question.format || 'QUICK',
       roundStartedAt: now,
-      roundDeadline: now + ROUND_DURATION_MS,
+      roundDeadline: now + durationMs,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
       recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
       updatedAt: now,
     };
 
     setRoom(updatedRoom);
-    console.log(`[NEXT ROUND] Room ${code} -> R${nextRound}/${room.totalRounds} (${nextRoundType}): "${question.optionA}" vs "${question.optionB}"`);
+    console.log(`[NEXT ROUND] Room ${code} -> R${nextRound}/${room.totalRounds} (${nextRoundType}, ${question.format || 'QUICK'} - ${timeLimit}s): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({ success: true, room: sanitizeRoom(updatedRoom) });
   } catch (err) {
@@ -506,7 +516,11 @@ function resolveRound(code: string): Room | null {
   const historyItem: RoundHistoryItem = {
     roundNumber: current.roundNumber,
     question: `${current.currentQuestion?.optionA} or ${current.currentQuestion?.optionB}`,
+    scenario: current.currentQuestion?.scenario,
     category: current.currentQuestion?.category || 'General',
+    format: current.currentQuestion?.format || current.currentQuestionFormat,
+    questionType: current.currentQuestion?.type || (roundType as QuestionType),
+    timeLimit: current.currentTimeLimit || (current.currentQuestion?.format === 'QUICK' ? 10 : 16),
     optionA: current.currentQuestion?.optionA || '',
     optionB: current.currentQuestion?.optionB || '',
     roundType,
@@ -573,21 +587,23 @@ async function finishGame(room: Room): Promise<void> {
   };
 
   setRoom(updated);
+  console.log(`[FINISH GAME] Room ${room.code} marked FINISHED with report: "${report.headline}"`);
 }
 
 // ============================================================
-// Internal: Interrupt Game
+// Internal: Interrupt Game (Player Leave or Timeout)
 // ============================================================
 async function interruptGame(room: Room, reason: string): Promise<void> {
-  if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') return;
+  if (room.status === 'INTERRUPTED' || room.status === 'FINISHED') return;
 
-  const totalCompleted = room.history.length;
+  console.warn(`[INTERRUPTING GAME] Room ${room.code}: ${reason}`);
+
   const report = await generateFinalReport(
     room.history,
     room.hostPlayerName,
     room.guestPlayerName || 'Guest',
     room.matches,
-    totalCompleted,
+    room.total,
     room.totalRounds,
     true,
     reason,
@@ -643,6 +659,8 @@ function sanitizeRoom(room: Room) {
     totalRounds: room.totalRounds,
     currentQuestion: room.currentQuestion,
     currentRoundType: room.currentRoundType,
+    currentTimeLimit: room.currentTimeLimit || (room.currentQuestion?.format === 'QUICK' ? 10 : 16),
+    currentQuestionFormat: room.currentQuestionFormat || (room.currentQuestion?.format || 'SITUATIONAL'),
     roundStartedAt: room.roundStartedAt,
     roundDeadline: room.roundDeadline,
     matches: room.matches,

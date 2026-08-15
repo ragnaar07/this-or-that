@@ -1,19 +1,26 @@
 // ============================================================
-// Game Types — shared between all server modules (V4.1 Viral Engine)
+// Game Types — shared between all server modules (V5 Format + Timer Upgrade)
 // ============================================================
 
+export type QuestionFormat = 'QUICK' | 'SITUATIONAL';
+export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'NORMAL';
 export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'WILDCARD';
 
 export interface Question {
   id?: string;
   category: string;
   subcategory?: string;
+  format?: QuestionFormat;
+  type?: QuestionType;
+  timeLimit?: number; // 10s for QUICK, 16s for SITUATIONAL/CHAOS/PREDICTION/CURRENT
   difficulty?: 1 | 2 | 3 | 4;
   scenario?: string;
   question?: string;
   optionA: string;
   optionB: string;
   roundType?: RoundType;
+  isCurrent?: boolean;
+  currentTopic?: string;
   tags?: string[];
 }
 
@@ -24,6 +31,9 @@ export interface RoundHistoryItem {
   question: string;
   scenario?: string;
   category: string;
+  format?: QuestionFormat;
+  questionType?: QuestionType;
+  timeLimit?: number;
   optionA: string;
   optionB: string;
   roundType?: RoundType;
@@ -66,6 +76,9 @@ export interface FinalReport {
   headline: string;
   overallVibe: string;
   matchPercentage: number;
+  instinctMatchPercentage?: number;
+  strategicMatchPercentage?: number;
+  instinctVsStrategyInsight?: string;
   completedQuestions: number;
   totalQuestions: number;
   totalScore?: number;
@@ -106,6 +119,8 @@ export interface Room {
   totalRounds: number; // default 20
   currentQuestion: Question | null;
   currentRoundType: RoundType;
+  currentTimeLimit: number; // 10 or 16
+  currentQuestionFormat: QuestionFormat;
   roundStartedAt: number | null;
   roundDeadline: number | null;
   matches: number;
