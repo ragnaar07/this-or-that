@@ -19,6 +19,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
   const [myChoice, setMyChoice] = useState<string | null>(null);
   const [lastRoundNumber, setLastRoundNumber] = useState(initialRoom.roundNumber);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
@@ -121,7 +122,12 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
     }
   }
 
-  async function handleLeave() {
+  function handlePromptLeave() {
+    setShowLeaveModal(true);
+  }
+
+  async function handleConfirmLeave() {
+    setShowLeaveModal(false);
     setIsLeaving(true);
     try {
       const res = await api.leaveRoom(session.roomCode, session.playerId);
@@ -146,8 +152,38 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
       <GameHeader
         matches={room.matches}
         total={room.total}
-        onLeave={handleLeave}
+        hostName={room.hostPlayerName}
+        guestName={room.guestPlayerName}
+        onLeave={handlePromptLeave}
       />
+
+      {/* Leave Confirmation Modal */}
+      {showLeaveModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
+          <div className="modal-card">
+            <div className="modal-title" id="leave-dialog-title">LEAVE GAME? 👋</div>
+            <div className="modal-body">
+              If you leave now, the game will stop and a partial result will be generated from the questions answered so far.
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn btn--secondary"
+                onClick={() => setShowLeaveModal(false)}
+                id="cancel-leave-btn"
+              >
+                STAY & PLAY
+              </button>
+              <button
+                className="btn btn--nomatch"
+                onClick={handleConfirmLeave}
+                id="confirm-leave-btn"
+              >
+                YES, LEAVE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full-screen reveal overlay */}
       {isRevealing && room.lastResult && (
@@ -164,8 +200,11 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
       <main className="game-screen">
         {q ? (
           <>
-            {/* Category + prompt */}
+            {/* Round & Category header */}
             <div className="question-header">
+              <div className="round-progress-pill">
+                ROUND {room.roundNumber} OF {room.totalRounds}
+              </div>
               {q.category && (
                 <div className="question-category">{q.category}</div>
               )}
@@ -210,7 +249,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
           <div style={{ textAlign: 'center' }}>
             <div className="spinner" />
             <p style={{ marginTop: 16, fontSize: '0.8rem', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>
-              Loading question…
+              Loading next question…
             </p>
           </div>
         )}

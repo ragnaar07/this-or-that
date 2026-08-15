@@ -160,8 +160,8 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     const playerName = (req.body?.playerName as string | undefined)?.trim() || 'Player 2';
     const playerId = generatePlayerId();
 
-    // Generate first question
-    const question = await generateQuestion(room.recentQuestions);
+    // Generate first question (Tier 1: Fun & Easy)
+    const question = await generateQuestion(room.recentQuestions, 1);
     const now = Date.now();
 
     const updatedRoom: Room = {
@@ -399,10 +399,10 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       return res.json({ success: true, room: sanitizeRoom(finished) });
     }
 
-    // Generate next dynamic question
-    const question = await generateQuestion(room.recentQuestions);
-    const now = Date.now();
+    // Generate next dynamic question based on difficulty curve
     const nextRound = room.roundNumber + 1;
+    const question = await generateQuestion(room.recentQuestions, nextRound);
+    const now = Date.now();
 
     clearRoundAnswers(code, room.roundNumber);
 

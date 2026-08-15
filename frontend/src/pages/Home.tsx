@@ -20,9 +20,18 @@ export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
 
   async function handleCreate() {
     setError('');
+    const name = playerName.trim();
+    if (!name) {
+      setError('PLEASE ENTER YOUR NAME FIRST (OR A NICKNAME).');
+      return;
+    }
+    if (name.length > 20) {
+      setError('NAME CANNOT EXCEED 20 CHARACTERS.');
+      return;
+    }
+
     setLoading('create');
     try {
-      const name = playerName.trim() || 'Player 1';
       const res = await api.createRoom(name);
       if (res.error || !res.room || !res.playerId) {
         setError(res.error ?? 'Could not create room. Try again.');
@@ -41,20 +50,24 @@ export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
 
   async function handleJoin() {
     setError('');
-    const code = roomCode.trim().toUpperCase();
-
-    if (!code) {
-      setError('ENTER A 4-CHARACTER ROOM CODE.');
+    const name = playerName.trim();
+    if (!name) {
+      setError('PLEASE ENTER YOUR NAME FIRST (OR A NICKNAME).');
       return;
     }
-    if (code.length !== 4) {
+    if (name.length > 20) {
+      setError('NAME CANNOT EXCEED 20 CHARACTERS.');
+      return;
+    }
+
+    const code = roomCode.trim().toUpperCase();
+    if (!code || code.length !== 4) {
       setError('ENTER A 4-CHARACTER ROOM CODE.');
       return;
     }
 
     setLoading('join');
     try {
-      const name = playerName.trim() || 'Player 2';
       const res = await api.joinRoom(code, name);
       if (res.error || !res.room || !res.playerId) {
         setError(res.error ?? 'Could not join room. Try again.');
@@ -79,14 +92,17 @@ export function Home({ onEnterGame, onEnterLobby }: HomeProps) {
         <div className="card">
           {/* Name input */}
           <div className="input-group">
-            <label className="input-label" htmlFor={nameId}>
-              Your Name
-            </label>
+            <div className="input-label-row">
+              <label className="input-label" htmlFor={nameId}>
+                Your Name
+              </label>
+              <span className="input-hint">Use a nickname if you want</span>
+            </div>
             <input
               id={nameId}
               className="input-field"
               type="text"
-              placeholder="Enter your name"
+              placeholder="e.g. Rahul / Priya"
               maxLength={20}
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}

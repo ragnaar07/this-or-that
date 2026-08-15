@@ -1,6 +1,6 @@
 // ============================================================
 // Client-Side Canvas Social Card Generator (1080 x 1350 PNG)
-// Zero server upload, runs 100% in the browser
+// High-resolution, zero server upload, India-first styling
 // ============================================================
 
 import type { FinalReport } from '../types/game';
@@ -23,10 +23,10 @@ export async function generateResultCardCanvas(
   ctx.fillStyle = '#FFF176';
   ctx.fillRect(0, 0, width, height);
 
-  // Subtle decorative dots
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
-  for (let x = 30; x < width; x += 40) {
-    for (let y = 30; y < height; y += 40) {
+  // Subtle decorative dots pattern
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+  for (let x = 30; x < width; x += 45) {
+    for (let y = 30; y < height; y += 45) {
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, Math.PI * 2);
       ctx.fill();
@@ -41,28 +41,27 @@ export async function generateResultCardCanvas(
   // --- BRAND HEADER ---
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FF3CAC';
-  ctx.font = '900 68px "Outfit", system-ui, sans-serif';
-  ctx.fillText('THIS ', width / 2 - 130, 130);
+  ctx.font = '900 64px "Outfit", system-ui, sans-serif';
+  ctx.fillText('THIS ', width / 2 - 130, 125);
 
   ctx.fillStyle = '#FFD600';
-  ctx.font = '900 74px "Outfit", system-ui, sans-serif';
-  ctx.fillText('⚡', width / 2 - 10, 130);
+  ctx.font = '900 70px "Outfit", system-ui, sans-serif';
+  ctx.fillText('⚡', width / 2 - 10, 125);
 
   ctx.fillStyle = '#7B2FBE';
-  ctx.font = '900 68px "Outfit", system-ui, sans-serif';
-  ctx.fillText(' THAT', width / 2 + 130, 130);
+  ctx.font = '900 64px "Outfit", system-ui, sans-serif';
+  ctx.fillText(' THAT', width / 2 + 130, 125);
 
   ctx.fillStyle = '#71717A';
-  ctx.font = '800 24px "Outfit", system-ui, sans-serif';
-  ctx.letterSpacing = '4px';
-  ctx.fillText('SYNC UP. MATCH MINDS.', width / 2, 175);
+  ctx.font = '800 22px "Outfit", system-ui, sans-serif';
+  ctx.fillText('SYNC UP • MATCH MINDS', width / 2, 168);
 
   // --- MAIN CARD (Cream Container) ---
-  const cardX = 80;
-  const cardY = 220;
-  const cardW = width - 160;
-  const cardH = 920;
-  const cardR = 36;
+  const cardX = 75;
+  const cardY = 205;
+  const cardW = width - 150;
+  const cardH = 950;
+  const cardR = 32;
 
   // Shadow
   ctx.fillStyle = '#18181B';
@@ -77,68 +76,70 @@ export async function generateResultCardCanvas(
   ctx.lineWidth = 6;
   ctx.stroke();
 
-  // Player Names Pill
+  // Player Names Matchup
   ctx.fillStyle = '#18181B';
-  ctx.font = '800 32px "Outfit", system-ui, sans-serif';
-  ctx.fillText(`${hostName.toUpperCase()}  ⚡  ${(guestName || 'GUEST').toUpperCase()}`, width / 2, cardY + 70);
+  ctx.font = '900 36px "Outfit", system-ui, sans-serif';
+  ctx.fillText(`${hostName.toUpperCase()}  ×  ${(guestName || 'GUEST').toUpperCase()}`, width / 2, cardY + 65);
 
   // Match Percentage Big Pill
-  const pillW = 440;
-  const pillH = 90;
+  const pillW = 460;
+  const pillH = 88;
   const pillX = width / 2 - pillW / 2;
-  const pillY = cardY + 110;
+  const pillY = cardY + 100;
 
   ctx.fillStyle = '#18181B';
-  roundRect(ctx, pillX + 6, pillY + 6, pillW, pillH, 45);
+  roundRect(ctx, pillX + 6, pillY + 6, pillW, pillH, 44);
   ctx.fill();
 
   ctx.fillStyle = '#00E5A0'; // Mint Green
-  roundRect(ctx, pillX, pillY, pillW, pillH, 45);
+  roundRect(ctx, pillX, pillY, pillW, pillH, 44);
   ctx.fill();
   ctx.strokeStyle = '#18181B';
   ctx.lineWidth = 4;
   ctx.stroke();
 
   ctx.fillStyle = '#18181B';
-  ctx.font = '900 52px "Outfit", system-ui, sans-serif';
-  ctx.fillText(`${report.matchPercentage}% MATCH`, width / 2, pillY + 64);
-
-  // Score Subtitle
-  ctx.fillStyle = '#71717A';
-  ctx.font = '800 26px "Outfit", system-ui, sans-serif';
-  const matchText = report.isPartial
-    ? `${report.completedQuestions} QUESTIONS COMPLETED (PARTIAL)`
-    : `${Math.round((report.matchPercentage / 100) * report.completedQuestions)} / ${report.completedQuestions} MATCHED`;
-  ctx.fillText(matchText, width / 2, cardY + 245);
+  ctx.font = '900 50px "Outfit", system-ui, sans-serif';
+  ctx.fillText(`${report.matchPercentage}% MATCH`, width / 2, pillY + 62);
 
   // Headline
   ctx.fillStyle = '#FF3CAC';
-  ctx.font = '900 42px "Outfit", system-ui, sans-serif';
-  wrapText(ctx, report.headline, width / 2, cardY + 310, cardW - 80, 50);
+  ctx.font = '900 38px "Outfit", system-ui, sans-serif';
+  const headline = `"${report.headline}"`;
+  wrapText(ctx, headline, width / 2, cardY + 245, cardW - 80, 46);
+
+  // Score Subtitle
+  ctx.fillStyle = '#71717A';
+  ctx.font = '800 24px "Outfit", system-ui, sans-serif';
+  const matchText = report.isPartial
+    ? `${report.completedQuestions} QUESTIONS ANSWERED (PARTIAL RESULT)`
+    : `${Math.round((report.matchPercentage / 100) * report.completedQuestions)} / ${report.completedQuestions} QUESTIONS MATCHED`;
+  ctx.fillText(matchText, width / 2, cardY + 310);
 
   // Divider line
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
   ctx.lineWidth = 3;
   ctx.setLineDash([12, 8]);
   ctx.beginPath();
-  ctx.moveTo(cardX + 40, cardY + 410);
-  ctx.lineTo(cardX + cardW - 40, cardY + 410);
+  ctx.moveTo(cardX + 40, cardY + 345);
+  ctx.lineTo(cardX + cardW - 40, cardY + 345);
   ctx.stroke();
   ctx.setLineDash([]); // reset
 
-  // Section 1: Strongest Matches
+  // Section 1: Strongest Matches / Same Brain
+  let curY = cardY + 390;
   ctx.textAlign = 'left';
   ctx.fillStyle = '#7B2FBE';
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
-  ctx.fillText('⚡ SAME BRAIN HIGHLIGHTS', cardX + 50, cardY + 460);
+  ctx.fillText('⚡ SAME BRAIN HIGHLIGHTS', cardX + 50, curY);
 
+  curY += 40;
   ctx.fillStyle = '#18181B';
-  ctx.font = '600 26px "Outfit", system-ui, sans-serif';
-  const matchHighlights = report.strongestMatches.slice(0, 2);
-  let curY = cardY + 505;
+  ctx.font = '700 25px "Outfit", system-ui, sans-serif';
+  const matchHighlights = (report.strongestMatches || []).slice(0, 2);
   for (const m of matchHighlights) {
-    ctx.fillText(`•  ${m}`, cardX + 50, curY);
-    curY += 40;
+    ctx.fillText(`• ${m}`, cardX + 50, curY);
+    curY += 36;
   }
 
   // Section 2: Chaos Award (Funniest Difference)
@@ -147,28 +148,42 @@ export async function generateResultCardCanvas(
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
   ctx.fillText('😂 CHAOS AWARD', cardX + 50, curY);
 
-  curY += 45;
+  curY += 40;
   ctx.fillStyle = '#27272A';
-  ctx.font = 'italic 600 25px "Outfit", system-ui, sans-serif';
-  const chaosText = `"${report.funniestDifference}"`;
-  curY = wrapText(ctx, chaosText, cardX + 50, curY, cardW - 100, 36, false);
+  ctx.font = 'italic 700 24px "Outfit", system-ui, sans-serif';
+  const chaosText = `"${report.funniestDifference || 'One plans everything, the other improvises!'}"`;
+  curY = wrapText(ctx, chaosText, cardX + 50, curY, cardW - 100, 34, false);
 
-  // Section 3: Final Vibe Verdict
-  curY += 30;
+  // Section 3: Plot Twist or Surprising Pattern
+  const surprise = report.mostUnexpectedMatch || (report.surprisingPatterns && report.surprisingPatterns[0]) || '';
+  if (surprise) {
+    curY += 20;
+    ctx.fillStyle = '#D97706';
+    ctx.font = '900 24px "Outfit", system-ui, sans-serif';
+    ctx.fillText('🌀 PLOT TWIST', cardX + 50, curY);
+
+    curY += 40;
+    ctx.fillStyle = '#3F3F46';
+    ctx.font = '600 23px "Outfit", system-ui, sans-serif';
+    curY = wrapText(ctx, surprise, cardX + 50, curY, cardW - 100, 32, false);
+  }
+
+  // Section 4: Final Vibe Verdict
+  curY += 20;
   ctx.fillStyle = '#18181B';
   ctx.font = '900 24px "Outfit", system-ui, sans-serif';
   ctx.fillText('🔮 THE VERDICT', cardX + 50, curY);
 
-  curY += 45;
+  curY += 40;
   ctx.fillStyle = '#3F3F46';
-  ctx.font = '500 24px "Outfit", system-ui, sans-serif';
-  wrapText(ctx, report.finalVerdict, cardX + 50, curY, cardW - 100, 34, false);
+  ctx.font = '600 23px "Outfit", system-ui, sans-serif';
+  wrapText(ctx, report.finalVerdict, cardX + 50, curY, cardW - 100, 32, false);
 
   // --- FOOTER ---
   ctx.textAlign = 'center';
   ctx.fillStyle = '#18181B';
   ctx.font = '800 24px "Outfit", system-ui, sans-serif';
-  ctx.fillText('Play with your friends on THIS ⚡ THAT', width / 2, height - 80);
+  ctx.fillText('Play THIS ⚡ THAT with your friends', width / 2, height - 75);
 
   return canvas;
 }
@@ -232,7 +247,7 @@ export async function downloadResultCard(
   const dataUrl = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = `this-that-match-${report.matchPercentage}pct.png`;
+  a.download = `this-that-${hostName.toLowerCase()}-${guestName.toLowerCase()}-${report.matchPercentage}pct.png`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -250,7 +265,7 @@ export async function shareResultCard(
       if (!blob) return resolve(false);
 
       const file = new File([blob], 'this-that-match.png', { type: 'image/png' });
-      const shareText = `⚡ THIS ⚡ THAT ⚡\n${hostName} & ${guestName} matched ${report.matchPercentage}%!\n"${report.headline}"\n\nPlay now!`;
+      const shareText = `⚡ THIS ⚡ THAT ⚡\n${hostName} & ${guestName} matched ${report.matchPercentage}%!\n"${report.headline}"\n\nPlay now: ${window.location.origin}`;
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {

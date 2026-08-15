@@ -24,20 +24,30 @@ export interface RoundHistoryItem {
   answeredAt: number;
 }
 
+export interface CategoryScore {
+  category: string;
+  matchPercentage: number;
+}
+
 export interface FinalReport {
   headline: string;
   overallVibe: string;
   matchPercentage: number;
   completedQuestions: number;
   totalQuestions: number;
+  categoryScores?: CategoryScore[];
   strongestMatches: string[];
   biggestDifferences: string[];
-  sharedTendencies: string[];
+  surprisingPatterns?: string[];
+  contradictions?: string[];
   funniestDifference: string;
   mostUnexpectedMatch: string;
+  sharedTendencies: string[];
   conversationStarters: string[];
-  player1Profile: string;
-  player2Profile: string;
+  player1Insight?: string;
+  player2Insight?: string;
+  player1Profile?: string;
+  player2Profile?: string;
   finalVerdict: string;
   isPartial: boolean;
   interruptedReason?: string;

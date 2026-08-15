@@ -7,7 +7,7 @@ export function Brand() {
         <span className="brand__bolt" aria-hidden="true">⚡</span>
         <span className="brand__that">THAT</span>
       </h1>
-      <p className="brand__sub">Sync up. Match minds.</p>
+      <p className="brand__sub">SYNC UP • MATCH MINDS</p>
     </div>
   );
 }
