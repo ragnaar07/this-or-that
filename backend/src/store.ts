@@ -20,6 +20,10 @@ export function setRoom(room: Room): void {
   rooms.set(room.code.toUpperCase(), { ...room, updatedAt: Date.now() });
 }
 
+export function getAllRooms(): Map<string, Room> {
+  return rooms;
+}
+
 export function deleteRoom(code: string): void {
   const upper = code.toUpperCase();
   rooms.delete(upper);

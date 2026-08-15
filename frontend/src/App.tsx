@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Home } from './pages/Home';
 import { Lobby } from './pages/Lobby';
 import { Game } from './pages/Game';
+import { Result } from './pages/Result';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
 
 export default function App() {
@@ -24,6 +25,12 @@ export default function App() {
     // Called from Lobby when guest joins and game starts
     setRoomState(room);
     setScreen('GAME');
+  }
+
+  function handleGameFinish(room: RoomState) {
+    // Called when game completes all rounds or is interrupted
+    setRoomState(room);
+    setScreen('RESULT');
   }
 
   return (
@@ -52,7 +59,16 @@ export default function App() {
         <Game
           session={session}
           initialRoom={roomState}
+          onGameFinish={handleGameFinish}
           onLeave={goHome}
+        />
+      )}
+
+      {screen === 'RESULT' && session && roomState && (
+        <Result
+          session={session}
+          room={roomState}
+          onPlayAgain={goHome}
         />
       )}
     </>

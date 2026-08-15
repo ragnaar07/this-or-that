@@ -10,10 +10,11 @@ import { RevealScreen } from '../components/RevealScreen';
 interface GameProps {
   session: PlayerSession;
   initialRoom: RoomState;
+  onGameFinish: (room: RoomState) => void;
   onLeave: () => void;
 }
 
-export function Game({ session, initialRoom, onLeave }: GameProps) {
+export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps) {
   const [room, setRoom] = useState<RoomState>(initialRoom);
   const [myChoice, setMyChoice] = useState<string | null>(null);
   const [lastRoundNumber, setLastRoundNumber] = useState(initialRoom.roundNumber);
@@ -21,6 +22,14 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
+
+  // Check for game completion / interruption
+  useEffect(() => {
+    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
+      console.log(`[GAME] Status is ${room.status}. Transitioning to Result screen...`);
+      onGameFinish(room);
+    }
+  }, [room.status, room, onGameFinish]);
 
   // Reset choice when round changes
   useEffect(() => {
@@ -39,7 +48,6 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
       const res = await api.pollRoom(session.roomCode, session.playerId);
       if (res.room) {
         setRoom((prev) => {
-          // Avoid overwriting newer local state with older poll response
           if (!prev || res.room!.updatedAt >= prev.updatedAt) {
             return res.room!;
           }
@@ -51,7 +59,7 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
     }
   }, [session.roomCode, session.playerId, isLeaving]);
 
-  usePolling(pollRoom, 700, !isLeaving);
+  usePolling(pollRoom, 700, !isLeaving && room.status !== 'FINISHED' && room.status !== 'INTERRUPTED');
 
   // Host auto-advances after reveal period (2.2s)
   useEffect(() => {
@@ -62,7 +70,7 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
       !isLeaving
     ) {
       nextRoundRequested.current = true;
-      console.log(`[GAME:HOST] Round ${room.roundNumber} reveal active. Advancing in 2.3s...`);
+      console.log(`[GAME:HOST] Round ${room.roundNumber}/${room.totalRounds} reveal active. Advancing in 2.3s...`);
 
       const timer = setTimeout(async () => {
         try {
@@ -72,13 +80,13 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
           }
         } catch (err) {
           console.error('[GAME:HOST] Failed to advance round:', err);
-          nextRoundRequested.current = false; // Allow retry if failed
+          nextRoundRequested.current = false;
         }
       }, 2300);
 
       return () => clearTimeout(timer);
     }
-  }, [room.status, room.roundNumber, session.role, session.roomCode, session.playerId, isLeaving]);
+  }, [room.status, room.roundNumber, room.totalRounds, session.role, session.roomCode, session.playerId, isLeaving]);
 
   async function handleChoice(choice: string) {
     if (myChoice !== null || room.status !== 'PLAYING' || !room.currentQuestion) return;
@@ -100,7 +108,6 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
         console.warn(`[GAME] Submit answer response notice:`, res.error);
       }
 
-      // If response has updated room state (e.g. triggered immediate REVEAL), apply immediately!
       if (res.room) {
         setRoom((prev) => {
           if (!prev || res.room!.updatedAt >= prev.updatedAt) {
@@ -117,7 +124,13 @@ export function Game({ session, initialRoom, onLeave }: GameProps) {
   async function handleLeave() {
     setIsLeaving(true);
     try {
-      await api.leaveRoom(session.roomCode, session.playerId);
+      const res = await api.leaveRoom(session.roomCode, session.playerId);
+      if (res.room && (res.room.status === 'INTERRUPTED' || res.room.status === 'FINISHED')) {
+        onGameFinish(res.room);
+        return;
+      }
+    } catch (err) {
+      console.error('[GAME] Leave error:', err);
     } finally {
       onLeave();
     }
