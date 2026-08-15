@@ -20,7 +20,7 @@ import { getFallbackQuestion, getRoundTypeForRound, getRoundConfiguration } from
 
 const QUESTION_SYSTEM_PROMPT = `You are the viral question design engine for THIS ⚡ THAT, an India-first multiplayer social game (Metros, Tier-2, Tier-3 cities across North, South, East, West).
 
-TWO DISTINCT FORMATS:
+FORMATS & TYPES:
 1. FORMAT A: "QUICK" (Fast instinct, 10-second timer).
    - Very short options (1-3 words max, e.g. "Tea" vs "Coffee", "Mountains" vs "Beach", "UPI" vs "Cash", "Bollywood" vs "OTT").
    - Leave "scenario" empty/null.
@@ -28,19 +28,24 @@ TWO DISTINCT FORMATS:
    - Include a 1-2 sentence dramatic scenario in "scenario".
    - Two genuinely tempting choices in "optionA" and "optionB".
 
+CRITICAL RULE FOR ALL QUESTIONS & EDGE QUESTIONS:
+- NO MORALLY SUPERIOR ANSWERS. NEVER make Option A = good person vs Option B = bad person.
+- Both options MUST be understandable, tempting, defensible, and slightly uncomfortable.
+- Ask: "What would you ACTUALLY do?", NOT "What SHOULD you do?".
+- Human Truths to reveal playfully: curiosity, ego, jealousy, FOMO, comfort, status, small greed, people-pleasing, friendship dynamics.
+
 CATEGORIES & THEMES:
-- Food & Chai, Indian Everyday Life, Bollywood & Regional Cinema, Cricket & Sports, Public Life & Culture, Digital & Memes, Money & Career, Friendship & Relationships, Crazy Superpowers, Childhood Nostalgia.
+- Edge & Instincts, Funny & Relatable, Food & Chai, Indian Everyday Life, Bollywood & Cinema, Cricket & Sports, Public Life & Culture, Digital & Memes, Money & Career, Friendship & Relationships, Crazy Superpowers.
 
 CURRENT TOPIC GUIDELINES:
-- Use current cultural, Bollywood, social media, technology/AI, and public conversations neutrally without stating unverified rumors as facts, making defamatory claims, or asking for political party loyalty.
+- Use current cultural, Bollywood, social media, technology/AI, and public conversations neutrally without stating unverified rumors as facts or asking for political party loyalty.
 
 RULES:
-- Both options must be tempting.
 - Return valid JSON ONLY:
 {
   "category": "...",
   "format": "QUICK" | "SITUATIONAL",
-  "type": "QUICK" | "SITUATIONAL" | "CHAOS" | "PREDICTION" | "CURRENT" | "DOUBLE_POINTS",
+  "type": "QUICK" | "SITUATIONAL" | "EDGE" | "FUNNY" | "CHAOS" | "PREDICTION" | "CURRENT" | "DOUBLE_POINTS",
   "timeLimit": 10 | 16,
   "scenario": "..." (or null if QUICK),
   "optionA": "...",
@@ -80,7 +85,11 @@ async function generateQuestionWithGemini(
   const timeLimit = roundConfig.timeLimit;
 
   let themeGuidance = 'Dynamic Indian cultural dilemma or fast choice';
-  if (targetRoundType === 'CHAOS') {
+  if (targetType === 'EDGE') {
+    themeGuidance = 'Edge dilemma revealing natural human behaviour (curiosity, FOMO, ego, secrets, money) with NO obvious good/bad choice (16s timer)';
+  } else if (targetType === 'FUNNY') {
+    themeGuidance = 'Funny, highly relatable desi human habit or quirk (5 min promise, panic text, front camera) (16s timer)';
+  } else if (targetRoundType === 'CHAOS') {
     themeGuidance = 'Absurd, crazy superpower dilemmas or high-stakes deals (16s timer)';
   } else if (targetRoundType === 'PREDICTION') {
     themeGuidance = 'Revealing social quirks, WhatsApp habits, or friendship situations where guessing opponent choice is fun (16s timer)';

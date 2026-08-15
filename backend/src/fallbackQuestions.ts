@@ -1,6 +1,6 @@
 // ============================================================
-// Comprehensive Question Pool (V5: Quick vs Situational vs Current)
-// 120+ Curated India-First Questions with 10s & 16s Timers
+// Comprehensive Question Pool (V5.1: Edge, Funny, Absurd, Quick & Situational)
+// 140+ Curated India-First Questions with No Morally Superior Answers
 // ============================================================
 
 import { Question, RoundType, QuestionFormat, QuestionType } from './types';
@@ -251,128 +251,297 @@ export const FALLBACK_QUESTIONS: Question[] = [
   },
 
   // ============================================================
-  // FORMAT B: SITUATIONAL THIS / THAT (TIMER: 16 SECONDS)
+  // FORMAT B: EDGE QUESTIONS (HUMAN TRUTH, NO MORAL BIAS, 16s)
   // ============================================================
   {
-    id: 'sit_job_family_city',
-    category: 'Money & Career',
-    subcategory: 'family_career_tradeoff',
+    id: 'edge_job_far_friend',
+    category: 'Edge & Instincts',
+    subcategory: 'friendship_jealousy',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'You get a dream job offer in another city with 40% higher salary, but you can only visit your family 2–3 times a year.',
-    optionA: 'Take the big career leap',
-    optionB: 'Stay close to family & friends',
-    tags: ['situational', 'career', 'family'],
+    scenario: 'Your best friend gets a life-changing job opportunity abroad, but moving away means you will rarely meet anymore.',
+    optionA: "Tell them to take it, even though I'll hate losing them",
+    optionB: "Secretly hope they stay because I don't want to lose them",
+    tags: ['edge', 'friendship', 'human_truth'],
   },
   {
-    id: 'sit_10_lakh_choice',
-    category: 'Money & Career',
-    subcategory: 'wealth_allocation',
+    id: 'edge_phone_unlocked_chat',
+    category: 'Edge & Instincts',
+    subcategory: 'curiosity_vs_boundary',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'You suddenly receive ₹10 Lakh tax-free cash today. You can only use it for ONE path:',
-    optionA: 'Invest all of it for your future wealth',
-    optionB: 'Spend 6 months travelling across India freely',
-    tags: ['situational', 'money', 'travel'],
+    scenario: "You see your friend's phone unlocked on the table and notice a private conversation that clearly isn't meant for you.",
+    optionA: 'Look for 5 seconds because curiosity wins',
+    optionB: "Put the phone down because I don't want to know",
+    tags: ['edge', 'curiosity', 'human_truth'],
   },
   {
-    id: 'sit_friend_late_chai',
-    category: 'Food & Chai',
-    subcategory: 'chai_habits',
+    id: 'edge_disliked_person_success',
+    category: 'Edge & Instincts',
+    subcategory: 'ego_and_success',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
-    timeLimit: 16,
-    difficulty: 1,
-    scenario: 'Your friend arrives 45 minutes late, but shows up holding two hot cups of cutting chai.',
-    optionA: 'Forgive them instantly because chai',
-    optionB: 'Make them explain themselves first 😂',
-    tags: ['situational', 'food', 'friendship'],
-  },
-  {
-    id: 'sit_friend_cant_afford_trip',
-    category: 'Friendship & Love',
-    subcategory: 'trip_loyalty',
-    format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'You planned a squad trip for 3 months. One day before leaving, your closest friend says they cannot afford it anymore.',
-    optionA: 'Cover their share secretly & take them along',
-    optionB: 'Tell them to skip this one and plan a cheaper trip later',
-    tags: ['situational', 'friendship', 'money'],
+    scenario: 'Someone you secretly dislike achieves massive, visible success and recognition.',
+    optionA: 'Genuinely congratulate them and move on',
+    optionB: 'Say congratulations while secretly feeling jealous',
+    tags: ['edge', 'ego', 'human_truth'],
   },
   {
-    id: 'sit_celeb_accountability',
-    category: 'Bollywood & Cinema',
-    subcategory: 'art_vs_artist',
+    id: 'edge_secret_beneficial_info',
+    category: 'Edge & Instincts',
+    subcategory: 'opportunism',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'You discover that your all-time favorite actor behaves completely opposite to their humble public persona in real life.',
-    optionA: 'Separate the art from the artist & keep watching',
-    optionB: 'Stop supporting their movies & unfollow',
-    tags: ['situational', 'cinema', 'values'],
+    scenario: 'Your friend confides a secret to you, but knowing this information could directly benefit your career or finances.',
+    optionA: 'Keep the secret 100% even if I could gain from it',
+    optionB: 'I would probably use the information if the opportunity was too good',
+    tags: ['edge', 'money', 'human_truth'],
   },
   {
-    id: 'sit_boss_promo_stress',
-    category: 'Money & Career',
-    subcategory: 'promotion_dilemma',
+    id: 'edge_credit_at_work',
+    category: 'Edge & Instincts',
+    subcategory: 'workplace_credit',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'You are offered a promotion that doubles your salary, but also doubles your work stress and wipes out your personal life.',
-    optionA: 'Accept the grind & double salary',
-    optionB: 'Decline and protect your peace of mind',
-    tags: ['situational', 'career', 'lifestyle'],
+    scenario: 'You accidentally receive high praise and credit from seniors for a project your teammate mostly finished.',
+    optionA: 'Correct everyone immediately in the room',
+    optionB: 'Enjoy the credit quietly unless directly asked',
+    tags: ['edge', 'career', 'human_truth'],
   },
   {
-    id: 'sit_bad_day_dinner',
-    category: 'Food & Chai',
-    subcategory: 'comfort_food',
+    id: 'edge_friend_disappears_relationship',
+    category: 'Edge & Instincts',
+    subcategory: 'relationship_jealousy',
     format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
-    timeLimit: 16,
-    difficulty: 1,
-    scenario: 'You just survived a thoroughly exhausting, terrible day at work/college. Dinner time arrives:',
-    optionA: 'Ghar Ka Khana / Comfort Meal',
-    optionB: 'Order Fancy Late-Night Swiggy Feast',
-    tags: ['situational', 'food'],
-  },
-  {
-    id: 'sit_crush_reply_delay',
-    category: 'Friendship & Love',
-    subcategory: 'ego_vs_chill',
-    format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
-    timeLimit: 16,
-    difficulty: 2,
-    scenario: 'Someone you really like takes 8 hours to reply to your message without any explanation.',
-    optionA: 'Reply normally when you see it without ego',
-    optionB: 'Wait exactly 8 hours to reply back 😂',
-    tags: ['situational', 'relationships'],
-  },
-  {
-    id: 'sit_friend_bad_decision',
-    category: 'Friendship & Love',
-    subcategory: 'intervention',
-    format: 'SITUATIONAL',
-    type: 'SITUATIONAL',
+    type: 'EDGE',
     timeLimit: 16,
     difficulty: 3,
-    scenario: 'Your best friend is clearly about to make a disastrous life/relationship decision despite warnings.',
-    optionA: 'Intervene brutally and stop them directly',
-    optionB: 'Give your opinion once, then let them learn from mistakes',
-    tags: ['situational', 'friendship'],
+    scenario: 'Your best friend gets into a new relationship and starts completely disappearing from the squad.',
+    optionA: 'Call them out directly and tell them they are changing',
+    optionB: 'Let them disappear and wait for them to come back on their own',
+    tags: ['edge', 'friendship', 'human_truth'],
+  },
+  {
+    id: 'edge_50k_phone_temptation',
+    category: 'Edge & Instincts',
+    subcategory: 'impulse_spending',
+    format: 'SITUATIONAL',
+    type: 'EDGE',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'You have ₹50,000 saved up. Your current phone is 3 years old, but still works fine.',
+    optionA: 'Keep the ₹50k safely in savings for future',
+    optionB: 'Buy the new phone because I really want it now',
+    tags: ['edge', 'money', 'human_truth'],
+  },
+  {
+    id: 'edge_rejected_person_glowup',
+    category: 'Edge & Instincts',
+    subcategory: 'past_regret',
+    format: 'SITUATIONAL',
+    type: 'EDGE',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'Someone who rejected you in the past becomes wildly successful, famous and attractive later.',
+    optionA: 'Feel genuinely happy for their journey',
+    optionB: "Quietly wonder why they didn't choose me 😂",
+    tags: ['edge', 'relationships', 'human_truth'],
+  },
+  {
+    id: 'edge_group_bill_extra_order',
+    category: 'Edge & Instincts',
+    subcategory: 'splitwise_conflict',
+    format: 'SITUATIONAL',
+    type: 'EDGE',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'At a big squad dinner, two friends ordered expensive drinks, but the bill comes as an equal Splitwise split.',
+    optionA: 'Pay the equal split quietly without awkwardness',
+    optionB: 'Speak up and say people should pay for what they ordered',
+    tags: ['edge', 'money', 'social'],
+  },
+  {
+    id: 'edge_crush_with_friend',
+    category: 'Edge & Instincts',
+    subcategory: 'secret_crush',
+    format: 'SITUATIONAL',
+    type: 'EDGE',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'You realize your good friend has started dating someone you secretly had a huge crush on for months.',
+    optionA: 'Smile, support them and keep feelings buried forever',
+    optionB: 'Distance yourself from both of them for a few months',
+    tags: ['edge', 'relationships', 'human_truth'],
   },
 
   // ============================================================
-  // FORMAT C: CURRENT INDIA TOPICS & PUBLIC DEBATES (TIMER: 16 SECONDS)
+  // FORMAT C: FUNNY & REAL HUMAN BEHAVIOUR (TIMER: 16 SECONDS)
+  // ============================================================
+  {
+    id: 'funny_5min_friend_promise',
+    category: 'Funny & Relatable',
+    subcategory: 'desi_habits',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: "Your friend calls: 'Bhai bas 5 minute mein pahunch raha hoon!'",
+    optionA: 'Believe them & get ready immediately',
+    optionB: 'Automatically add 30 minutes in my head 😂',
+    tags: ['funny', 'relatable', 'lifestyle'],
+  },
+  {
+    id: 'funny_we_need_to_talk',
+    category: 'Funny & Relatable',
+    subcategory: 'panic_texts',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: "Someone sends a text: 'We need to talk.'",
+    optionA: "Reply instantly: 'Haan bolo?'",
+    optionB: 'Mentally investigate every mistake I made since childhood 😂',
+    tags: ['funny', 'relatable', 'digital'],
+  },
+  {
+    id: 'funny_front_camera_public',
+    category: 'Funny & Relatable',
+    subcategory: 'public_embarrassment',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: 'You accidentally open the front camera at an unflattering double-chin angle in a crowded place.',
+    optionA: 'Pretend nothing happened with a straight poker face',
+    optionB: 'Immediately look around to check who saw me 😂',
+    tags: ['funny', 'relatable'],
+  },
+  {
+    id: 'funny_regret_message_sent',
+    category: 'Funny & Relatable',
+    subcategory: 'digital_regret',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: 'You send a risky message and immediately regret it within 1 second.',
+    optionA: 'Delete for everyone before they can see',
+    optionB: 'Stare at the screen hoping the universe fixes it 😂',
+    tags: ['funny', 'digital'],
+  },
+  {
+    id: 'funny_swiggy_2min_delay',
+    category: 'Funny & Relatable',
+    subcategory: 'food_delivery',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: "Your food delivery status says 'arriving in 2 mins' for the last 15 minutes.",
+    optionA: 'Refresh the app every 10 seconds',
+    optionB: 'Stare at the delivery rider map icon moving backward 😂',
+    tags: ['funny', 'food'],
+  },
+  {
+    id: 'funny_wifi_disconnect_game',
+    category: 'Funny & Relatable',
+    subcategory: 'tech_rage',
+    format: 'SITUATIONAL',
+    type: 'FUNNY',
+    timeLimit: 16,
+    difficulty: 1,
+    scenario: 'Your home WiFi cuts off right in the middle of a crucial online match or meeting.',
+    optionA: 'Calmly restart the router and wait',
+    optionB: 'Hit the router once like it owes you money 😂',
+    tags: ['funny', 'tech'],
+  },
+
+  // ============================================================
+  // FORMAT D: ABSURD / JAAHIL & CHAOTIC (TIMER: 16 SECONDS)
+  // ============================================================
+  {
+    id: 'absurd_uncle_investment_10cr',
+    category: 'Crazy & Superpowers',
+    subcategory: 'absurd_deals',
+    format: 'SITUATIONAL',
+    type: 'CHAOS',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: "You receive ₹10 Crore cash, BUT every time you spend money, a random uncle appears and asks: 'Beta, investment kya hai?'",
+    optionA: 'Take the ₹10 Crore cash',
+    optionB: 'Reject the deal: I cannot live like this 😂',
+    roundType: 'CHAOS',
+    tags: ['chaos', 'absurd', 'money'],
+  },
+  {
+    id: 'absurd_teleport_arey_bhai',
+    category: 'Crazy & Superpowers',
+    subcategory: 'absurd_superpowers',
+    format: 'SITUATIONAL',
+    type: 'CHAOS',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: "You can instantly teleport anywhere in the world, BUT every teleport makes a loud 'AREY BHAI!' echo sound.",
+    optionA: 'Take the superpower',
+    optionB: 'Keep walking normally 😂',
+    roundType: 'CHAOS',
+    tags: ['chaos', 'absurd'],
+  },
+  {
+    id: 'absurd_biryani_vs_pizza_lifetime',
+    category: 'Food & Chai',
+    subcategory: 'food_ultimatum',
+    format: 'SITUATIONAL',
+    type: 'CHAOS',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'You get 100% free unlimited Biryani for life, BUT you can never eat Pizza ever again.',
+    optionA: 'Biryani wins forever',
+    optionB: 'Pizza is non-negotiable',
+    roundType: 'CHAOS',
+    tags: ['chaos', 'food'],
+  },
+  {
+    id: 'absurd_invisible_nobody_looking',
+    category: 'Crazy & Superpowers',
+    subcategory: 'useless_powers',
+    format: 'SITUATIONAL',
+    type: 'CHAOS',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'You receive the power of invisibility, but it only works when absolutely nobody is looking at you.',
+    optionA: 'Take the superpower',
+    optionB: 'That is literally just being normal 😂',
+    roundType: 'CHAOS',
+    tags: ['chaos', 'superpower'],
+  },
+  {
+    id: 'chaos_crore_battery',
+    category: 'Crazy & Superpowers',
+    subcategory: 'wild_deals',
+    format: 'SITUATIONAL',
+    type: 'CHAOS',
+    timeLimit: 16,
+    difficulty: 3,
+    scenario: 'You are offered ₹10 Crore cash, BUT your phone stays permanently on 1% battery forever:',
+    optionA: 'Take the money immediately',
+    optionB: 'Reject the deal: 1% battery anxiety is deadly 😂',
+    roundType: 'CHAOS',
+    tags: ['chaos', 'money'],
+  },
+
+  // ============================================================
+  // FORMAT E: CURRENT INDIA TOPICS & PUBLIC DEBATES (TIMER: 16 SECONDS)
   // ============================================================
   {
     id: 'current_bollywood_controversy',
@@ -434,99 +603,9 @@ export const FALLBACK_QUESTIONS: Question[] = [
     optionB: 'Resist it: Keep Indian art & music 100% human',
     tags: ['current', 'tech', 'ai'],
   },
-  {
-    id: 'current_brand_ad_debate',
-    category: 'Public Life & Culture',
-    subcategory: 'ad_controversy',
-    format: 'SITUATIONAL',
-    type: 'CURRENT',
-    isCurrent: true,
-    currentTopic: 'Viral Commercials & Backlash',
-    timeLimit: 16,
-    difficulty: 2,
-    scenario: 'A bold festive brand advertisement sparks trending debates across social media:',
-    optionA: 'Appreciate creative freedom in storytelling',
-    optionB: 'Think brands should avoid polarizing themes',
-    tags: ['current', 'culture'],
-  },
-  {
-    id: 'current_cricket_banter_culture',
-    category: 'Cricket & Sports',
-    subcategory: 'trolling_vs_passion',
-    format: 'SITUATIONAL',
-    type: 'CURRENT',
-    isCurrent: true,
-    currentTopic: 'Social Media Cricket Fan Wars',
-    timeLimit: 16,
-    difficulty: 2,
-    scenario: 'After a heartbreaking cricket loss, social media erupts with intense fan debates and memes:',
-    optionA: 'Stay online, read all memes & join banter',
-    optionB: 'Uninstall social apps for 2 days for mental peace 😂',
-    tags: ['current', 'cricket', 'digital'],
-  },
 
   // ============================================================
-  // FORMAT D: CHAOS ROUNDS (TIMER: 16 SECONDS)
-  // ============================================================
-  {
-    id: 'chaos_superpower_india',
-    category: 'Crazy & Superpowers',
-    subcategory: 'desi_powers',
-    format: 'SITUATIONAL',
-    type: 'CHAOS',
-    timeLimit: 16,
-    difficulty: 3,
-    scenario: 'You receive ONE superpower, but it only functions within India:',
-    optionA: 'Instantly teleport to any city/village',
-    optionB: 'Pause all road traffic whenever you are running late',
-    roundType: 'CHAOS',
-    tags: ['chaos', 'superpower'],
-  },
-  {
-    id: 'chaos_crore_battery',
-    category: 'Crazy & Superpowers',
-    subcategory: 'wild_deals',
-    format: 'SITUATIONAL',
-    type: 'CHAOS',
-    timeLimit: 16,
-    difficulty: 3,
-    scenario: 'You are offered ₹10 Crore cash, BUT your phone stays permanently on 1% battery forever:',
-    optionA: 'Take the money immediately',
-    optionB: 'Reject the deal: 1% battery anxiety is deadly 😂',
-    roundType: 'CHAOS',
-    tags: ['chaos', 'money'],
-  },
-  {
-    id: 'chaos_delete_one_thing',
-    category: 'Crazy & Superpowers',
-    subcategory: 'life_wish',
-    format: 'SITUATIONAL',
-    type: 'CHAOS',
-    timeLimit: 16,
-    difficulty: 3,
-    scenario: 'You can permanently erase ONE daily annoyance from Indian everyday life:',
-    optionA: 'City Traffic Jams',
-    optionB: 'Spam Phone Calls & Fraud Messages',
-    roundType: 'CHAOS',
-    tags: ['chaos', 'lifestyle'],
-  },
-  {
-    id: 'chaos_unlimited_pass',
-    category: 'Crazy & Superpowers',
-    subcategory: 'golden_ticket',
-    format: 'SITUATIONAL',
-    type: 'CHAOS',
-    timeLimit: 16,
-    difficulty: 3,
-    scenario: 'You win one magical golden card that never expires:',
-    optionA: '100% Free Food & Dining Anywhere Forever',
-    optionB: '100% Free Flights & Train Travel Worldwide',
-    roundType: 'CHAOS',
-    tags: ['chaos', 'travel', 'food'],
-  },
-
-  // ============================================================
-  // FORMAT E: PREDICTION ROUNDS (MIND READER, TIMER: 16 SECONDS)
+  // FORMAT F: PREDICTION & DOUBLE POINTS (TIMER: 16 SECONDS)
   // ============================================================
   {
     id: 'pred_voice_note_reaction',
@@ -557,24 +636,6 @@ export const FALLBACK_QUESTIONS: Question[] = [
     tags: ['prediction', 'digital'],
   },
   {
-    id: 'pred_future_plan_relative',
-    category: 'Indian Everyday Life',
-    subcategory: 'relative_interrogation',
-    format: 'SITUATIONAL',
-    type: 'PREDICTION',
-    timeLimit: 16,
-    difficulty: 3,
-    scenario: 'Nosy relative at a wedding asks: "Beta, aage ka kya future plan hai?"',
-    optionA: 'Give the polite, prepared scripted answer',
-    optionB: 'Awkwardly laugh and excuse yourself to the food counter 😂',
-    roundType: 'PREDICTION',
-    tags: ['prediction', 'family'],
-  },
-
-  // ============================================================
-  // FORMAT F: DOUBLE POINTS ROUNDS (TIMER: 16 SECONDS)
-  // ============================================================
-  {
     id: 'double_rent_vs_buy',
     category: 'Money & Career',
     subcategory: 'life_philosophy',
@@ -602,20 +663,6 @@ export const FALLBACK_QUESTIONS: Question[] = [
     roundType: 'DOUBLE_POINTS',
     tags: ['double_points', 'ambition'],
   },
-  {
-    id: 'double_peace_vs_adventure',
-    category: 'Values & Priorities',
-    subcategory: 'core_vibe',
-    format: 'SITUATIONAL',
-    type: 'DOUBLE_POINTS',
-    timeLimit: 16,
-    difficulty: 4,
-    scenario: 'What is the fundamental goal of your 20s and 30s?',
-    optionA: 'Thrilling adventures, taking huge risks and making memories',
-    optionB: 'Rock-solid peace of mind, high stability and security',
-    roundType: 'DOUBLE_POINTS',
-    tags: ['double_points', 'values'],
-  },
 ];
 
 let fallbackIndex = 0;
@@ -641,9 +688,14 @@ export function getRoundConfiguration(roundNumber: number): {
   if (roundNumber === 5 || roundNumber === 12) {
     return { roundType: 'NORMAL', format: 'SITUATIONAL', type: 'CURRENT', timeLimit: 16 };
   }
+  if (roundNumber === 7 || roundNumber === 13) {
+    return { roundType: 'NORMAL', format: 'SITUATIONAL', type: 'EDGE', timeLimit: 16 };
+  }
+  if (roundNumber === 3 || roundNumber === 16) {
+    return { roundType: 'NORMAL', format: 'SITUATIONAL', type: 'FUNNY', timeLimit: 16 };
+  }
 
-  // Alternating Quick vs Situational rhythm
-  // R1, R2, R4, R6, R8, R11, R14, R17 are Quick (10s)
+  // Alternating Quick vs Situational rhythm (40% quick)
   const isQuickRound = [1, 2, 4, 6, 8, 11, 14, 17].includes(roundNumber);
   if (isQuickRound) {
     return { roundType: 'NORMAL', format: 'QUICK', type: 'QUICK', timeLimit: 10 };
@@ -713,7 +765,7 @@ export function getFallbackQuestion(
   } else if (gameMode === 'INDIA') {
     modePool = FALLBACK_QUESTIONS.filter((q) => q.category.includes('Regional') || q.category.includes('Everyday') || q.category.includes('Nostalgia'));
   } else if (gameMode === 'DEEP') {
-    modePool = FALLBACK_QUESTIONS.filter((q) => q.category.includes('Values') || q.category.includes('Friendship') || q.category.includes('Money'));
+    modePool = FALLBACK_QUESTIONS.filter((q) => q.category.includes('Values') || q.category.includes('Edge') || q.category.includes('Money'));
   }
 
   if (modePool.length === 0) modePool = FALLBACK_QUESTIONS;
@@ -721,7 +773,9 @@ export function getFallbackQuestion(
   // 1. Specific roundType match (CHAOS, PREDICTION, DOUBLE_POINTS)
   if (targetRoundType !== 'NORMAL') {
     const candidates = modePool.filter(
-      (q) => q.roundType === targetRoundType && !isDuplicateQuestion(q, recentSigSet)
+      (q) => q.roundType === targetRoundType &&
+             (!forbiddenCat || q.category !== forbiddenCat) &&
+             !isDuplicateQuestion(q, recentSigSet)
     );
     if (candidates.length > 0) {
       const selected = candidates[fallbackIndex % candidates.length];
@@ -736,10 +790,29 @@ export function getFallbackQuestion(
     }
   }
 
-  // 2. Format match (QUICK vs SITUATIONAL/CURRENT)
+  // 2. Exact type match (EDGE, FUNNY, CURRENT, QUICK)
+  if (targetType === 'EDGE' || targetType === 'FUNNY' || targetType === 'CURRENT') {
+    const typePool = modePool.filter(
+      (q) => q.type === targetType &&
+             (!forbiddenCat || q.category !== forbiddenCat) &&
+             !isDuplicateQuestion(q, recentSigSet)
+    );
+    if (typePool.length > 0) {
+      const selected = typePool[fallbackIndex % typePool.length];
+      fallbackIndex++;
+      return {
+        ...selected,
+        format: selected.format || targetFormat,
+        type: targetType,
+        timeLimit: selected.timeLimit || timeLimit,
+        roundType: targetRoundType,
+      };
+    }
+  }
+
+  // 3. Format match (QUICK vs SITUATIONAL)
   const formatPool = modePool.filter((q) => {
     if (forbiddenCat && q.category === forbiddenCat) return false;
-    if (targetType === 'CURRENT') return q.isCurrent || q.type === 'CURRENT';
     if (targetFormat === 'QUICK') return q.format === 'QUICK';
     return q.format !== 'QUICK';
   });
@@ -758,9 +831,10 @@ export function getFallbackQuestion(
     }
   }
 
-  // 3. General pool search
+  // 4. General pool fallback (respect forbiddenCat if possible)
   for (let i = 0; i < modePool.length; i++) {
     const candidate = modePool[(fallbackIndex + i) % modePool.length];
+    if (forbiddenCat && candidate.category === forbiddenCat) continue;
     if (!isDuplicateQuestion(candidate, recentSigSet)) {
       fallbackIndex = (fallbackIndex + i + 1) % modePool.length;
       return {

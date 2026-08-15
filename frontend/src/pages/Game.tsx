@@ -251,6 +251,14 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               <div className="game-round-badge game-round-badge--double">
                 🔥 DOUBLE POINTS ROUND (2X)
               </div>
+            ) : q.type === 'EDGE' ? (
+              <div className="game-round-badge game-round-badge--edge">
+                ⚡ RAW HUMAN TRUTH (16s)
+              </div>
+            ) : q.type === 'FUNNY' ? (
+              <div className="game-round-badge game-round-badge--funny">
+                😂 RELATABLE QUIRK (16s)
+              </div>
             ) : q.type === 'CURRENT' || q.isCurrent ? (
               <div className="game-round-badge game-round-badge--current">
                 📰 CURRENT INDIA DEBATE (16s)
@@ -277,7 +285,15 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
               {/* Situational Scenario / Premise */}
               {q.scenario ? (
                 <div className="question-scenario-card">
-                  <div className="question-scenario-text">{q.scenario}</div>
+                  <div className={`question-scenario-text ${
+                    q.scenario.length < 75
+                      ? 'question-scenario-text--hero'
+                      : q.scenario.length < 130
+                      ? 'question-scenario-text--lg'
+                      : 'question-scenario-text--md'
+                  }`}>
+                    {q.scenario}
+                  </div>
                   <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
                     {hasAnswered ? 'LOCKED 🔒' : promptText}
                   </div>

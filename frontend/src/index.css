@@ -2188,40 +2188,79 @@ body {
 }
 
 /* ============================================================
-   SITUATIONAL QUESTION SCENARIO CARD
+   SITUATIONAL QUESTION SCENARIO CARD (LARGE & RESPONSIVE)
 ============================================================ */
 .question-scenario-card {
   background: var(--color-card);
-  border: 2.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 12px 18px;
-  box-shadow: 0 3px 0 var(--color-border);
-  margin: 6px auto 10px;
-  max-width: 440px;
+  border: 3px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 28px;
+  box-shadow: 0 4px 0 var(--color-border);
+  margin: 8px auto 14px;
+  max-width: min(720px, 94vw);
+  width: 100%;
   text-align: center;
   animation: logo-pop-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .question-scenario-text {
-  font-size: 0.95rem;
   font-weight: 800;
   color: var(--color-text);
-  line-height: 1.45;
-  letter-spacing: -0.2px;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  text-wrap: balance;
 }
 
-@media (max-width: 480px) {
+/* Tier 1: Short & punchy scenarios (< 75 chars) -> 42px to 52px on Desktop! */
+.question-scenario-text--hero {
+  font-size: clamp(2.35rem, 4.2vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -1px;
+}
+
+/* Tier 2: Medium scenarios (75 - 130 chars) -> 34px to 44px on Desktop */
+.question-scenario-text--lg {
+  font-size: clamp(1.95rem, 3.5vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.7px;
+}
+
+/* Tier 3: Longer detailed scenarios (> 130 chars) -> 28px to 38px on Desktop */
+.question-scenario-text--md {
+  font-size: clamp(1.65rem, 2.9vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.28;
+  letter-spacing: -0.4px;
+}
+
+@media (max-width: 600px) {
   .question-scenario-card {
-    padding: 10px 14px;
-    margin: 4px auto 8px;
+    padding: 14px 16px;
+    margin: 6px auto 10px;
+    border-radius: var(--radius-md);
   }
-  .question-scenario-text {
-    font-size: 0.88rem;
+
+  .question-scenario-text--hero {
+    font-size: clamp(1.85rem, 6.4vw, 2.35rem); /* ~30px to 38px */
+    line-height: 1.22;
+  }
+
+  .question-scenario-text--lg {
+    font-size: clamp(1.55rem, 5.4vw, 1.95rem); /* ~25px to 31px */
+    line-height: 1.24;
+  }
+
+  .question-scenario-text--md {
+    font-size: clamp(1.35rem, 4.8vw, 1.7rem); /* ~22px to 27px */
+    line-height: 1.26;
   }
 }
 
 /* ============================================================
-   V5 QUESTION FORMAT BADGES & QUICK TYPOGRAPHY
+   V5.1 QUESTION FORMAT BADGES & OPTION SIZING
 ============================================================ */
 .game-round-badge--quick {
   background: #fef08a;
@@ -2235,17 +2274,44 @@ body {
   border-color: var(--color-violet);
 }
 
+.game-round-badge--edge {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #f97316;
+}
+
+.game-round-badge--funny {
+  background: #fef9c3;
+  color: #854d0e;
+  border-color: #eab308;
+}
+
 .game-round-badge--current {
   background: #e0e7ff;
   color: #3730a3;
   border-color: #6366f1;
 }
 
+.options-container {
+  width: 100%;
+  max-width: min(640px, 94vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+.option-btn {
+  font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.3;
+  padding: 18px 22px;
+}
+
 .options-container--quick .option-btn {
-  font-size: 1.25rem;
+  font-size: clamp(1.6rem, 5.5vw, 2.4rem);
   font-weight: 900;
   letter-spacing: -0.5px;
-  padding: 22px 18px;
+  padding: 24px 20px;
 }
 
 .countdown-bar-fill.expired {

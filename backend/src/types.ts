@@ -3,7 +3,7 @@
 // ============================================================
 
 export type QuestionFormat = 'QUICK' | 'SITUATIONAL';
-export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'NORMAL';
+export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'NORMAL';
 export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'WILDCARD';
 
 export interface Question {
