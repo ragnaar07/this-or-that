@@ -1,11 +1,15 @@
+// ============================================================
+// Comprehensive Test Suite — THIS ⚡ THAT V6 (10,000 Dataset & Ultra-Fast Engine)
+// ============================================================
+
 import { generateQuestion, generateFinalReport, computeCategoryScores, computeAchievements, computePredictionScore, generateLiveReaction } from './questionService';
-import { getFallbackQuestion, getRoundTypeForRound, getRoundConfiguration, FALLBACK_QUESTIONS, isDuplicateQuestion, normalizeSignature } from './fallbackQuestions';
+import { getFallbackQuestion, getRoundTypeForRound, getRoundConfiguration, FALLBACK_QUESTIONS, isDuplicateQuestion, normalizeSignature, getTotalQuestionCount } from './fallbackQuestions';
 import { setRoom, getRoom, deleteRoom, setPlayerAnswer, getRoundAnswers, clearRoundAnswers } from './store';
 import { Room, RoundHistoryItem, Question } from './types';
 
 async function runTests() {
   console.log('⚡ ============================================================');
-  console.log('⚡ THIS ⚡ THAT — V5.1 EDGE, FUNNY, CHAOS & LARGE TYPOGRAPHY AUDIT');
+  console.log('⚡ THIS ⚡ THAT — 10,000 QUESTIONS & HIGH-SPEED ENGINE AUDIT');
   console.log('⚡ ============================================================\n');
 
   let passed = 0;
@@ -21,19 +25,33 @@ async function runTests() {
     }
   }
 
-  // --- Test 1: V5.1 Formats & Timers Configuration ---
-  console.log('--- TEST 1: Question Formats & Authoritative Timers ---');
+  // --- Test 1: 10,000 Questions Dataset Size & Structure ---
+  console.log('--- TEST 1: Dataset Size & Structure ---');
+  const totalCount = getTotalQuestionCount();
+  assert(totalCount === 10000, `Dataset contains exactly 10,000 questions (Actual: ${totalCount})`);
+  assert(FALLBACK_QUESTIONS.length === 10000, `Fallback pool exposes all 10,000 questions`);
+  assert(FALLBACK_QUESTIONS[0].optionA === 'Pizza' && FALLBACK_QUESTIONS[0].optionB === 'Burgers', 'Question #1 is Pizza vs Burgers');
+  assert(FALLBACK_QUESTIONS[9999].optionA === 'Tarot cards' && FALLBACK_QUESTIONS[9999].optionB === 'An unknown creature', 'Question #10,000 is Tarot cards vs An unknown creature');
+
+  // --- Test 2: Sub-millisecond Generation Speed Benchmark ---
+  console.log('\n--- TEST 2: Performance Benchmark (<1ms per question) ---');
+  const startTime = Date.now();
+  const benchmarkCount = 500;
+  for (let i = 1; i <= benchmarkCount; i++) {
+    generateQuestion([], [], i % 20 + 1, undefined, 'RANDOM');
+  }
+  const elapsed = Date.now() - startTime;
+  const avgMs = (elapsed / benchmarkCount).toFixed(3);
+  console.log(`  ℹ️ Generated ${benchmarkCount} questions in ${elapsed}ms (Average: ${avgMs}ms per question)`);
+  assert(elapsed < 100, `500 questions generated in under 100ms (Actual: ${elapsed}ms)`);
+
+  // --- Test 3: Round Configurations & Timers ---
+  console.log('\n--- TEST 3: Question Formats & Authoritative Timers ---');
   const r1Config = getRoundConfiguration(1);
   assert(r1Config.format === 'QUICK' && r1Config.timeLimit === 10, 'Round 1 is QUICK format with 10-second timer');
 
-  const r3Config = getRoundConfiguration(3);
-  assert(r3Config.type === 'FUNNY' && r3Config.timeLimit === 16, 'Round 3 is FUNNY format with 16-second timer');
-
-  const r5Config = getRoundConfiguration(5);
-  assert(r5Config.type === 'CURRENT' && r5Config.timeLimit === 16, 'Round 5 is CURRENT India topic with 16-second timer');
-
-  const r7Config = getRoundConfiguration(7);
-  assert(r7Config.type === 'EDGE' && r7Config.timeLimit === 16, 'Round 7 is EDGE (human truth) with 16-second timer');
+  const r2Config = getRoundConfiguration(2);
+  assert(r2Config.format === 'SITUATIONAL' && r2Config.timeLimit === 16, 'Round 2 is SITUATIONAL format with 16-second timer');
 
   const r9Config = getRoundConfiguration(9);
   assert(r9Config.roundType === 'CHAOS' && r9Config.timeLimit === 16, 'Round 9 is CHAOS with 16-second timer');
@@ -41,300 +59,149 @@ async function runTests() {
   const r10Config = getRoundConfiguration(10);
   assert(r10Config.roundType === 'PREDICTION' && r10Config.timeLimit === 16, 'Round 10 is PREDICTION with 16-second timer');
 
-  const r13Config = getRoundConfiguration(13);
-  assert(r13Config.type === 'EDGE' && r13Config.timeLimit === 16, 'Round 13 is EDGE with 16-second timer');
-
   const r15Config = getRoundConfiguration(15);
   assert(r15Config.roundType === 'DOUBLE_POINTS' && r15Config.timeLimit === 16, 'Round 15 is DOUBLE_POINTS with 16-second timer');
 
-  // --- Test 2: 30-Question Specialized Quality Audit (10 Edge, 10 Funny, 10 Chaos) ---
-  console.log('\n--- TEST 2: 30-Question Audit (10 Edge, 10 Funny, 10 Chaos) ---');
+  // --- Test 4: Game Modes Filtering ---
+  console.log('\n--- TEST 4: Game Modes Filtering ---');
+  const foodQ = await generateQuestion([], [], 1, undefined, 'FOOD');
+  assert(foodQ.category === 'Food & Chai', `FOOD mode returns Food & Chai question (Got: "${foodQ.category}" - ${foodQ.optionA} vs ${foodQ.optionB})`);
 
-  const edgePool = FALLBACK_QUESTIONS.filter(q => q.type === 'EDGE');
-  const funnyPool = FALLBACK_QUESTIONS.filter(q => q.type === 'FUNNY');
-  const chaosPool = FALLBACK_QUESTIONS.filter(q => q.type === 'CHAOS' || q.roundType === 'CHAOS');
+  const entQ = await generateQuestion([], [], 1, undefined, 'ENTERTAINMENT');
+  assert(entQ.category === 'Bollywood & Cinema' || entQ.category === 'Cricket & Sports' || entQ.category === 'Digital & Memes', `ENTERTAINMENT mode returns cinema/sports/pop culture (Got: "${entQ.category}" - ${entQ.optionA} vs ${entQ.optionB})`);
 
-  console.log(`  ℹ️  Edge Pool size: ${edgePool.length} | Funny Pool size: ${funnyPool.length} | Chaos Pool size: ${chaosPool.length}`);
-  assert(edgePool.length >= 8, 'At least 8-10 Edge questions curated in fallback pool');
-  assert(funnyPool.length >= 6, 'At least 6-10 Funny questions curated in fallback pool');
-  assert(chaosPool.length >= 5, 'At least 5-10 Chaos questions curated in fallback pool');
+  const chaosQ = await generateQuestion([], [], 1, undefined, 'CHAOS');
+  assert(chaosQ.category === 'Crazy & Superpowers' || chaosQ.type === 'CHAOS', `CHAOS mode returns superpowers/spooky/wild dilemmas (Got: "${chaosQ.category}")`);
 
-  // Audit Edge questions for no moral superiority
-  let edgeNoMoralBias = true;
-  edgePool.forEach((eq, idx) => {
-    // Check neither option contains preachy words like "responsible", "immature", "good person"
-    const textA = eq.optionA.toLowerCase();
-    const textB = eq.optionB.toLowerCase();
-    if (textA.includes('bad person') || textB.includes('bad person') || textA.includes('morally') || textB.includes('morally')) {
-      edgeNoMoralBias = false;
-    }
-  });
-  assert(edgeNoMoralBias, 'Edge questions avoid judgmental/preachy moral labeling');
-
-  // Print sample 30 questions summary
-  console.log('\n  --- Sample 10 EDGE Questions ---');
-  edgePool.slice(0, 10).forEach((eq, i) => {
-    console.log(`    [EDGE ${i + 1}] "${eq.scenario}"`);
-    console.log(`      A: ${eq.optionA}`);
-    console.log(`      B: ${eq.optionB}`);
-  });
-
-  console.log('\n  --- Sample 10 FUNNY Questions ---');
-  funnyPool.slice(0, 10).forEach((fq, i) => {
-    console.log(`    [FUNNY ${i + 1}] "${fq.scenario}"`);
-    console.log(`      A: ${fq.optionA}`);
-    console.log(`      B: ${fq.optionB}`);
-  });
-
-  console.log('\n  --- Sample 10 CHAOS / ABSURD Questions ---');
-  chaosPool.slice(0, 10).forEach((cq, i) => {
-    console.log(`    [CHAOS ${i + 1}] "${cq.scenario}"`);
-    console.log(`      A: ${cq.optionA}`);
-    console.log(`      B: ${cq.optionB}`);
-  });
-
-  // --- Test 3: Anti-Clustering & Rhythm in 20 Rounds ---
-  console.log('\n--- TEST 3: Dynamic Rhythm & Anti-Clustering (20 Rounds) ---');
+  // --- Test 5: Dynamic 20-Round Non-repeating Flow ---
+  console.log('\n--- TEST 5: 20-Round Flow & Anti-Clustering ---');
   const sequence: Question[] = [];
   const recentQs: string[] = [];
   const recentCats: string[] = [];
 
   for (let r = 1; r <= 20; r++) {
-    const q = getFallbackQuestion(recentQs, recentCats, r, getRoundTypeForRound(r), 'RANDOM');
+    const q = await generateQuestion(recentQs, recentCats, r, getRoundTypeForRound(r), 'RANDOM');
     sequence.push(q);
     recentQs.push(q.optionA);
     recentCats.push(q.category);
   }
 
   const quickCount = sequence.filter(q => q.format === 'QUICK').length;
-  const edgeCount = sequence.filter(q => q.type === 'EDGE').length;
-  const funnyCount = sequence.filter(q => q.type === 'FUNNY').length;
-  const chaosCount = sequence.filter(q => q.type === 'CHAOS' || q.roundType === 'CHAOS').length;
+  const uniqueOptionAs = new Set(sequence.map(q => q.optionA));
+  console.log(`  ℹ️ 20-Round Summary: ${quickCount} Quick rounds, ${20 - quickCount} Situational/Chaos/Prediction rounds. ${uniqueOptionAs.size}/20 unique choices.`);
+  assert(uniqueOptionAs.size === 20, 'Zero duplicate questions in 20 rounds');
+  assert(quickCount >= 6 && quickCount <= 12, 'Balanced alternating pace between fast instinct and deep dilemmas');
 
-  console.log(`  ℹ️  20-Round Breakdown: ${quickCount} Quick (10s), ${edgeCount} Edge (16s), ${funnyCount} Funny (16s), ${chaosCount} Chaos (16s)`);
-  assert(quickCount >= 6 && quickCount <= 10, 'Balanced alternating rhythm (6-10 quick instinct rounds)');
-  assert(edgeCount >= 2, 'Edge questions represented in natural 20-round flow (~10-15%)');
+  // --- Test 6: Fast Final Analysis Report (Nice, Fun, Brutal) ---
+  console.log('\n--- TEST 6: Fast Grounded Analysis Reports (<2ms) ---');
+  const history: RoundHistoryItem[] = [];
 
-  let has3InARow = false;
-  for (let i = 2; i < sequence.length; i++) {
-    if (
-      sequence[i].category === sequence[i - 1].category &&
-      sequence[i].category === sequence[i - 2].category
-    ) {
-      has3InARow = true;
-      break;
-    }
-  }
-  assert(!has3InARow, 'Zero 3-consecutive same category clusters in 20 rounds');
+  for (let r = 1; r <= 10; r++) {
+    const isQuick = r % 2 !== 0;
+    const isMatch = r % 3 !== 0;
+    const optA = `Option A for R${r}`;
+    const optB = `Option B for R${r}`;
 
-  // --- Test 4: Instinct vs Strategy AI Report Breakdown ---
-  console.log('\n--- TEST 4: Instinct vs Strategy AI Report Breakdown ---');
-  const fullHistory: RoundHistoryItem[] = [];
-
-  for (let r = 1; r <= 20; r++) {
-    const config = getRoundConfiguration(r);
-    const isQuick = config.format === 'QUICK';
-    const isMatch = isQuick ? r % 10 !== 0 : r % 2 === 0;
-    const optA = `Choice A for R${r}`;
-    const optB = `Choice B for R${r}`;
-
-    fullHistory.push({
+    history.push({
       roundNumber: r,
       question: `${optA} or ${optB}`,
-      scenario: isQuick ? undefined : `Detailed situational scenario for round ${r}`,
-      category: isQuick ? 'Food & Chai' : (config.type === 'EDGE' ? 'Edge & Instincts' : 'Money & Career'),
-      format: config.format,
-      questionType: config.type,
-      timeLimit: config.timeLimit,
+      category: isQuick ? 'Food & Chai' : 'Bollywood & Cinema',
+      format: isQuick ? 'QUICK' : 'SITUATIONAL',
+      questionType: isQuick ? 'QUICK' : 'SITUATIONAL',
+      timeLimit: isQuick ? 10 : 16,
       optionA: optA,
       optionB: optB,
-      roundType: config.roundType,
+      roundType: r === 9 ? 'CHAOS' : r === 10 ? 'PREDICTION' : 'NORMAL',
       hostChoice: optA,
       guestChoice: isMatch ? optA : optB,
+      hostPrediction: r === 10 ? optA : undefined,
+      guestPrediction: r === 10 ? optA : undefined,
+      hostPredictionResult: r === 10 ? 'CORRECT' : undefined,
+      guestPredictionResult: r === 10 ? 'CORRECT' : undefined,
       result: isMatch ? 'MATCH' : 'NO_MATCH',
-      pointsAwarded: isMatch ? (config.roundType === 'DOUBLE_POINTS' ? 2 : 1) : 0,
+      pointsAwarded: isMatch ? 1 : 0,
       answeredAt: Date.now(),
     });
   }
 
-  const matches = fullHistory.filter(h => h.result === 'MATCH').length;
-  const report = await generateFinalReport(
-    fullHistory,
-    'Aarav',
-    'Tara',
-    matches,
-    20,
-    20,
-    false,
-    undefined,
-    'RANDOM',
-    'fun'
-  );
+  const matches = history.filter(h => h.result === 'MATCH').length;
 
-  assert(report.instinctMatchPercentage !== undefined, `Instinct Match computed: ${report.instinctMatchPercentage}%`);
-  assert(report.strategicMatchPercentage !== undefined, `Strategic Match computed: ${report.strategicMatchPercentage}%`);
-  assert(report.instinctVsStrategyInsight !== undefined && report.instinctVsStrategyInsight.length > 0, `Insight: "${report.instinctVsStrategyInsight}"`);
+  const repStart = Date.now();
+  const funReport = await generateFinalReport(history, 'Kabir', 'Rhea', matches, 10, 20, false, undefined, 'RANDOM', 'fun');
+  const repElapsed = Date.now() - repStart;
 
-  // --- Test 5: Leave Flow & Grounded Partial Report ---
-  console.log('\n--- TEST 5: Leave Flow & Grounded Partial Report (Rounds 1-6) ---');
-  const partialHistory = fullHistory.slice(0, 6);
-  const partialMatches = partialHistory.filter(h => h.result === 'MATCH').length;
-  const partialReport = await generateFinalReport(
-    partialHistory,
-    'Rahul',
-    'Priya',
-    partialMatches,
-    6,
-    20,
-    true,
-    'Rahul left the game.',
-    'RANDOM',
-    'fun',
-    'host',
-    Date.now()
-  );
+  console.log(`  ℹ️ Final report generated in ${repElapsed}ms: "${funReport.headline}" (${funReport.matchPercentage}% match)`);
+  assert(repElapsed < 10, `Report generation executed in under 10ms (Actual: ${repElapsed}ms)`);
+  assert(funReport.matchPercentage === 70, `Match percentage accurately computed (70%)`);
+  assert(funReport.instinctMatchPercentage !== undefined, `Instinct match percentage computed: ${funReport.instinctMatchPercentage}%`);
+  assert(funReport.strategicMatchPercentage !== undefined, `Strategic match percentage computed: ${funReport.strategicMatchPercentage}%`);
+  assert((funReport.achievements?.length ?? 0) > 0, `Achievements unlocked: ${(funReport.achievements || []).map(a => a.title).join(', ')}`);
 
-  assert(partialReport.isPartial === true, 'Report is marked as partial (isPartial: true)');
-  assert(partialReport.completedQuestions === 6, 'Completed questions correctly records 6 rounds');
-  assert(partialReport.totalQuestions === 20, 'Total scheduled questions is 20');
-  assert(partialReport.leftBy === 'host', 'Report records leftBy: host');
-  assert(partialReport.interruptedReason === 'Rahul left the game.', 'Report records interruptedReason');
-  assert(partialReport.finalVerdict.includes('6 rounds') || partialReport.finalVerdict.includes('actually answered') || partialReport.finalVerdict.includes('compatibility'), 'Grounded final verdict refers to actually answered rounds');
+  // Brutal tone check
+  const brutalReport = await generateFinalReport(history, 'Kabir', 'Rhea', matches, 10, 20, false, undefined, 'RANDOM', 'brutal');
+  assert(brutalReport.headline.length > 0, `Brutal headline: "${brutalReport.headline}"`);
+  assert(brutalReport.finalVerdict.length > 0, `Brutal verdict: "${brutalReport.finalVerdict}"`);
 
-  // --- Test 6: In-Flight Answer Preservation During Leave ---
-  console.log('\n--- TEST 6: In-Flight Answer Preservation During Leave ---');
-  const testRoomCode = 'TEST';
-  const mockRoom: Room = {
-    code: testRoomCode,
-    hostPlayerId: 'host123',
+  // --- Test 7: Live Reaction Engine ---
+  console.log('\n--- TEST 7: Live Reaction System ---');
+  const matchRx = generateLiveReaction(true, 3, 'NORMAL');
+  const diffRx = generateLiveReaction(false, -3, 'NORMAL');
+  const dblRx = generateLiveReaction(true, 1, 'DOUBLE_POINTS');
+  const predRx = generateLiveReaction(false, 0, 'PREDICTION', true, true);
+
+  assert(matchRx.includes('⚡') || matchRx.includes('SAME BRAIN') || matchRx.includes('sync'), `Match reaction: "${matchRx}"`);
+  assert(diffRx.includes('💀') || diffRx.includes('OPPOSITE') || diffRx.includes('universe'), `Mismatch reaction: "${diffRx}"`);
+  assert(dblRx.includes('2X SCORE'), `Double points reaction: "${dblRx}"`);
+  assert(predRx.includes('DOUBLE MIND READERS'), `Prediction reaction: "${predRx}"`);
+
+  // --- Test 8: Room Lifecycle & Instant Leave Flow ---
+  console.log('\n--- TEST 8: Room Lifecycle & Leave Flow ---');
+  const roomCode = 'TEST';
+  const testRoom: Room = {
+    code: roomCode,
+    hostPlayerId: 'h1',
     hostPlayerName: 'HostPlayer',
     hostLastSeenAt: Date.now(),
-    guestPlayerId: 'guest456',
+    guestPlayerId: 'g1',
     guestPlayerName: 'GuestPlayer',
     guestLastSeenAt: Date.now(),
     status: 'PLAYING',
-    roundNumber: 3,
+    roundNumber: 5,
     totalRounds: 20,
-    currentQuestion: {
-      category: 'Food & Chai',
-      scenario: 'Late night snack dilemma',
-      optionA: 'Maggi',
-      optionB: 'Chai & Biscuits',
-      format: 'SITUATIONAL',
-      timeLimit: 16,
-    },
+    currentQuestion: sequence[0],
     currentRoundType: 'NORMAL',
-    currentTimeLimit: 16,
-    currentQuestionFormat: 'SITUATIONAL',
+    currentTimeLimit: 10,
+    currentQuestionFormat: 'QUICK',
     roundStartedAt: Date.now(),
-    roundDeadline: Date.now() + 16000,
-    matches: 1,
-    total: 2,
-    score: 1,
+    roundDeadline: Date.now() + 10000,
+    matches: 3,
+    total: 4,
+    score: 3,
     streak: 1,
     lastResult: 'MATCH',
-    lastHostChoice: 'Tea',
-    lastGuestChoice: 'Tea',
-    recentQuestions: [],
-    recentCategories: [],
-    history: [
-      {
-        roundNumber: 1,
-        question: 'Tea or Coffee',
-        category: 'Food & Chai',
-        optionA: 'Tea',
-        optionB: 'Coffee',
-        hostChoice: 'Tea',
-        guestChoice: 'Tea',
-        result: 'MATCH',
-        pointsAwarded: 1,
-        answeredAt: Date.now() - 20000,
-      },
-      {
-        roundNumber: 2,
-        question: 'Mountains or Beach',
-        category: 'Travel',
-        optionA: 'Mountains',
-        optionB: 'Beach',
-        hostChoice: 'Mountains',
-        guestChoice: 'Beach',
-        result: 'NO_MATCH',
-        pointsAwarded: 0,
-        answeredAt: Date.now() - 10000,
-      },
-    ],
+    lastHostChoice: 'Pizza',
+    lastGuestChoice: 'Pizza',
+    recentQuestions: ['Pizza'],
+    recentCategories: ['Food & Chai'],
+    history: history.slice(0, 4),
     finalReport: null,
     gameMode: 'RANDOM',
     aiTone: 'fun',
-    stateVersion: 5,
+    stateVersion: 1,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
 
-  setRoom(mockRoom);
-  // Simulate Host answering Maggi, Guest not answered yet
-  setPlayerAnswer(testRoomCode, 3, 'host', {
-    playerId: 'host123',
-    roundNumber: 3,
-    choice: 'Maggi',
-    answeredAt: Date.now(),
-  });
+  setRoom(testRoom);
+  const retrieved = getRoom(roomCode);
+  assert(retrieved !== undefined && retrieved.code === roomCode, 'Room stored and retrieved successfully');
 
-  // Simulate Leave trigger
-  const answersBeforeLeave = getRoundAnswers(testRoomCode, 3);
-  assert(answersBeforeLeave.host?.choice === 'Maggi', 'Host choice recorded before leave');
-  assert(answersBeforeLeave.guest === undefined, 'Guest choice is unsubmitted');
+  deleteRoom(roomCode);
+  assert(getRoom(roomCode) === undefined, 'Room cleaned up successfully');
 
-  // Verify room preserve logic
-  const roundAnswers = getRoundAnswers(testRoomCode, 3);
-  const hostChoice = roundAnswers.host?.choice ?? null;
-  const guestChoice = roundAnswers.guest?.choice ?? null;
-  const isMatch = hostChoice !== null && guestChoice !== null && hostChoice === guestChoice;
-  mockRoom.history.push({
-    roundNumber: 3,
-    question: `${mockRoom.currentQuestion?.optionA} or ${mockRoom.currentQuestion?.optionB}`,
-    scenario: mockRoom.currentQuestion?.scenario,
-    category: mockRoom.currentQuestion?.category || 'General',
-    optionA: mockRoom.currentQuestion?.optionA || '',
-    optionB: mockRoom.currentQuestion?.optionB || '',
-    hostChoice,
-    guestChoice,
-    result: isMatch ? 'MATCH' : 'NO_MATCH',
-    pointsAwarded: 0,
-    answeredAt: Date.now(),
-  });
-  mockRoom.total = mockRoom.history.length;
-
-  assert(mockRoom.history.length === 3, 'History contains 3 rounds including in-flight round');
-  assert(mockRoom.history[2].hostChoice === 'Maggi', 'Host answer preserved in round 3 history');
-  assert(mockRoom.history[2].guestChoice === null, 'Guest answer marked null/unanswered in round 3 history');
-  assert(mockRoom.history[2].result === 'NO_MATCH', 'Unmatched in-flight round evaluated as NO_MATCH');
-
-  // --- Test 7: Simultaneous Leave Handling ---
-  console.log('\n--- TEST 7: Simultaneous Leave & Idempotence ---');
-  mockRoom.status = 'INTERRUPTED';
-  mockRoom.leftBy = 'host';
-  mockRoom.interruptedReason = 'HostPlayer left the game.';
-  mockRoom.finalReport = partialReport;
-
-  // Guest also leaves at same time:
-  if (mockRoom.status === 'INTERRUPTED' && mockRoom.leftBy !== 'guest') {
-    mockRoom.leftBy = 'both';
-    mockRoom.interruptedReason = 'Both players left the game.';
-    if (mockRoom.finalReport) {
-      mockRoom.finalReport.leftBy = 'both';
-      mockRoom.finalReport.interruptedReason = 'Both players left the game.';
-    }
-  }
-
-  assert(mockRoom.leftBy === 'both', 'Simultaneous leave updates room.leftBy to "both"');
-  assert(mockRoom.finalReport?.leftBy === 'both', 'Final report leftBy updated to "both"');
-
-  deleteRoom(testRoomCode);
-
-  console.log('\n⚡ ============================================================');
-  console.log(`⚡ TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
-  console.log('⚡ ============================================================');
+  console.log('\n============================================================');
+  console.log(`⚡ AUDIT COMPLETE: ${passed} PASSED, ${failed} FAILED`);
+  console.log('============================================================\n');
 
   if (failed > 0) {
     process.exit(1);

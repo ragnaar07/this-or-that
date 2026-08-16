@@ -16,8 +16,10 @@ Two friends join the same room on their phones. Both receive the exact same pair
 * **Full-Screen Emotional Reveals:**
   * 🟩 **MATCH!** (Mint Green flash)
   * 🟥 **NO MATCH** (Red flash)
-* **Live AI Question Generation:** Dynamically creates punchy, fun choices via Google Gemini AI / OpenAI.
-* **30+ Offline Fallback Questions:** Zero interruption even if AI APIs are unreachable or offline.
+* **10,000 Questions In-Memory Engine:** Pre-indexed offline dataset with sub-millisecond (<1ms) response times. Zero API lag, zero rate limits, and zero external costs.
+* **Smart Category & Game Mode System:** Food & Chai, Bollywood & Cinema, Cricket & Sports, Indian Everyday Life, Deep Dilemmas, Chaos & Superpowers, Money & Career, Friendship & Relationships, Digital & Memes.
+* **Dynamic Round Formats:** Fast Instinct (10s Quick rounds) and Deep Dilemmas (16s Situational, Chaos, Prediction & Double Points rounds).
+* **Instant Psychological & Roast Reports:** Comprehensive post-game compatibility analysis with Nice, Fun, and Brutal Roast tones.
 * **Tactile & Responsive Design:** High-contrast retro-game-show aesthetic, thumb-friendly mobile UI.
 * **Zero Waiting:** Fully automatic flow (`Join → Question → Pick → Reveal → Next Round`).
 
@@ -34,8 +36,8 @@ Two friends join the same room on their phones. Both receive the exact same pair
                                  │
                      ┌───────────┴───────────┐
                      ▼                       ▼
-            [ In-Memory Store ]     [ AI Question Service ]
-            (Rooms & Answers)       (Google Gemini / OpenAI / Fallback)
+            [ In-Memory Store ]     [ 10,000 Questions Engine ]
+            (Rooms & Answers)       (Pre-Indexed Fast Dataset)
 ```
 
 ---
@@ -142,17 +144,8 @@ npm run dev
 | Variable | Required | Description | Default |
 |---|---|---|---|
 | `PORT` | No | Port on which the Express server listens | `5000` |
-| `GEMINI_API_KEY` | Recommended | Google Gemini API key for dynamic AI questions | Built-in fallback |
-| `OPENAI_API_KEY` | Optional | OpenAI API key (alternative to Gemini) | — |
 | `FRONTEND_URL` | Production | Allowed origin for CORS in production | `http://localhost:5173` |
 | `ALLOWED_ORIGIN` | Optional | Additional allowed CORS origin | — |
-
-> 🔒 **Security Notice:** AI credentials, database URLs, and server secrets must **NEVER** be committed to Git or exposed in the frontend.
-
-### Frontend (`frontend/.env.example`)
-| Variable | Required | Description | Default |
-|---|---|---|---|
-| `VITE_API_URL` | Production | Full URL of the deployed backend server | `http://localhost:5000` |
 
 ---
 
@@ -166,7 +159,6 @@ The frontend and backend are decoupled and can be deployed independently.
 3. **Start Command:** `npm start`
 4. **Environment Variables:**
    * `PORT`: Set automatically by platform (or `5000`)
-   * `GEMINI_API_KEY`: Your Google AI Studio API key
    * `FRONTEND_URL`: `https://your-frontend-domain.vercel.app`
 5. **Health Check Path:** `/health`
 
