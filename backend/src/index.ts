@@ -27,7 +27,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const DEFAULT_TOTAL_ROUNDS = 20;
 const ROUND_DURATION_MS = 10_000;
-const DISCONNECT_TIMEOUT_MS = 25_000;
+const DISCONNECT_TIMEOUT_MS = 30_000;
 
 // ---- Middleware ----
 
@@ -127,6 +127,7 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       finalReport: null,
       gameMode,
       aiTone,
+      stateVersion: 1,
       createdAt: now,
       updatedAt: now,
     };
@@ -195,6 +196,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       roundDeadline: now + durationMs,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
       recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
+      stateVersion: (room.stateVersion || 1) + 1,
       updatedAt: now,
     };
 
@@ -246,9 +248,10 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 
       if (hostInactive || guestInactive) {
         const missingPlayer = hostInactive ? room.hostPlayerName : (room.guestPlayerName || 'Opponent');
-        console.warn(`[DISCONNECT] Room ${code}: ${missingPlayer} disconnected.`);
+        const missingRole: 'host' | 'guest' = hostInactive ? 'host' : 'guest';
+        console.warn(`[DISCONNECT] Room ${code}: ${missingPlayer} (${missingRole}) disconnected.`);
 
-        await interruptGame(room, `${missingPlayer} lost connection.`);
+        await interruptGame(room, `${missingPlayer} lost connection.`, missingRole);
         const updated = getRoom(code)!;
         return res.json({ success: true, room: sanitizeRoom(updated) });
       }
@@ -290,7 +293,7 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
     }
 
     if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
-      return res.status(409).json({ error: 'Game has already ended.' });
+      return res.status(409).json({ error: 'Game has already ended.', room: sanitizeRoom(room) });
     }
 
     if (role !== 'host' && role !== 'guest') {
@@ -343,6 +346,10 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
         return res.json({ success: true, room: sanitizeRoom(resolved || room) });
       }
     }
+
+    room.stateVersion = (room.stateVersion || 1) + 1;
+    room.updatedAt = now;
+    setRoom(room);
 
     const latest = getRoom(code)!;
     res.json({ success: true, room: sanitizeRoom(latest) });
@@ -402,6 +409,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       roundDeadline: now + durationMs,
       recentQuestions: [...room.recentQuestions, question.optionA].slice(-15),
       recentCategories: [...(room.recentCategories || []), question.category].slice(-10),
+      stateVersion: (room.stateVersion || 1) + 1,
       updatedAt: now,
     };
 
@@ -416,9 +424,9 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// DELETE /api/rooms/:code/leave — Player leaves
+// Unified Authoritative Leave Handler (Supports DELETE & POST)
 // ============================================================
-app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
+async function handleLeaveRoom(req: Request, res: Response) {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
     const { playerId } = req.body ?? {};
@@ -428,8 +436,30 @@ app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
       return res.json({ success: true });
     }
 
-    const leaverName = playerId === room.hostPlayerId ? room.hostPlayerName : (room.guestPlayerName || 'A player');
+    // 1. Idempotent check: if already finished, return finished room
+    if (room.status === 'FINISHED') {
+      return res.json({ success: true, room: sanitizeRoom(room) });
+    }
 
+    // 2. Idempotent check: if already interrupted, handle simultaneous or duplicate leave
+    if (room.status === 'INTERRUPTED') {
+      const leaverRole: 'host' | 'guest' = playerId === room.guestPlayerId ? 'guest' : 'host';
+      if (room.leftBy && room.leftBy !== leaverRole && room.leftBy !== 'both') {
+        room.leftBy = 'both';
+        room.interruptedReason = 'Both players left the game.';
+        if (room.finalReport) {
+          room.finalReport.leftBy = 'both';
+          room.finalReport.interruptedReason = 'Both players left the game.';
+        }
+        room.stateVersion = (room.stateVersion || 1) + 1;
+        room.updatedAt = Date.now();
+        setRoom(room);
+        console.log(`[SIMULTANEOUS LEAVE] Room ${code}: Both players marked as left.`);
+      }
+      return res.json({ success: true, room: sanitizeRoom(room) });
+    }
+
+    // 3. Leaving before game starts (Lobby or Waiting)
     if (room.status === 'WAITING' || room.roundNumber === 0) {
       if (playerId === room.hostPlayerId) {
         deleteRoom(code);
@@ -439,22 +469,73 @@ app.delete('/api/rooms/:code/leave', async (req: Request, res: Response) => {
           guestPlayerId: null,
           guestPlayerName: null,
           status: 'WAITING',
+          stateVersion: (room.stateVersion || 1) + 1,
           updatedAt: Date.now(),
         });
       }
       return res.json({ success: true, reason: 'left_before_start' });
     }
 
-    console.log(`[PLAYER LEFT] ${leaverName} left room ${code}. Freezing partial game...`);
-    await interruptGame(room, `${leaverName} left the room.`);
+    // 4. Active game leave (PLAYING or REVEALING)
+    const leaverRole: 'host' | 'guest' = playerId === room.guestPlayerId ? 'guest' : 'host';
+    const leaverName = leaverRole === 'host' ? room.hostPlayerName : (room.guestPlayerName || 'Opponent');
+
+    console.log(`[PLAYER LEFT] ${leaverName} (${leaverRole}) left room ${code}. Preserving in-progress round and computing authoritative partial result...`);
+
+    // Preserve in-progress round answers if leaving while PLAYING
+    if (room.status === 'PLAYING' && room.currentQuestion) {
+      const alreadyInHistory = room.history.some(h => h.roundNumber === room.roundNumber);
+      if (!alreadyInHistory) {
+        const roundAnswers = getRoundAnswers(code, room.roundNumber);
+        const hostChoice = roundAnswers.host?.choice ?? null;
+        const guestChoice = roundAnswers.guest?.choice ?? null;
+        const hostPred = roundAnswers.host?.prediction ?? null;
+        const guestPred = roundAnswers.guest?.prediction ?? null;
+
+        const isMatch = hostChoice !== null && guestChoice !== null && hostChoice.trim().toLowerCase() === guestChoice.trim().toLowerCase();
+        const pointsAwarded = isMatch ? (room.currentRoundType === 'DOUBLE_POINTS' ? 2 : 1) : 0;
+
+        const historyItem: RoundHistoryItem = {
+          roundNumber: room.roundNumber,
+          question: `${room.currentQuestion.optionA} or ${room.currentQuestion.optionB}`,
+          scenario: room.currentQuestion.scenario,
+          category: room.currentQuestion.category || 'General',
+          format: room.currentQuestion.format || room.currentQuestionFormat,
+          questionType: room.currentQuestion.type || (room.currentRoundType as QuestionType),
+          timeLimit: room.currentTimeLimit || 10,
+          optionA: room.currentQuestion.optionA || '',
+          optionB: room.currentQuestion.optionB || '',
+          roundType: room.currentRoundType,
+          hostChoice,
+          guestChoice,
+          hostPrediction: hostPred,
+          guestPrediction: guestPred,
+          result: isMatch ? 'MATCH' : 'NO_MATCH',
+          pointsAwarded,
+          answeredAt: Date.now(),
+        };
+
+        room.history.push(historyItem);
+        if (isMatch) {
+          room.matches += 1;
+          room.score = (room.score || 0) + pointsAwarded;
+        }
+        room.total = room.history.length;
+      }
+    }
+
+    await interruptGame(room, `${leaverName} left the game.`, leaverRole);
     const updated = getRoom(code)!;
 
     res.json({ success: true, room: sanitizeRoom(updated) });
   } catch (err) {
-    console.error('[DELETE /api/rooms/:code/leave] Error:', err);
+    console.error('[handleLeaveRoom] Error:', err);
     res.status(500).json({ error: 'Could not leave room.' });
   }
-});
+}
+
+app.delete('/api/rooms/:code/leave', handleLeaveRoom);
+app.post('/api/rooms/:code/leave', handleLeaveRoom);
 
 // ============================================================
 // Internal: Synchronous Round Evaluation
@@ -551,6 +632,7 @@ function resolveRound(code: string): Room | null {
     lastGuestPredictionResult: guestPredResult,
     lastLiveReaction: liveReaction,
     history: [...current.history, historyItem],
+    stateVersion: (current.stateVersion || 1) + 1,
     updatedAt: Date.now(),
   };
 
@@ -583,6 +665,7 @@ async function finishGame(room: Room): Promise<void> {
     ...room,
     status: 'FINISHED',
     finalReport: report,
+    stateVersion: (room.stateVersion || 1) + 1,
     updatedAt: Date.now(),
   };
 
@@ -593,11 +676,16 @@ async function finishGame(room: Room): Promise<void> {
 // ============================================================
 // Internal: Interrupt Game (Player Leave or Timeout)
 // ============================================================
-async function interruptGame(room: Room, reason: string): Promise<void> {
-  if (room.status === 'INTERRUPTED' || room.status === 'FINISHED') return;
+async function interruptGame(
+  room: Room,
+  reason: string,
+  leftBy?: 'host' | 'guest' | 'both'
+): Promise<void> {
+  if (room.status === 'INTERRUPTED' && room.finalReport) return;
 
-  console.warn(`[INTERRUPTING GAME] Room ${room.code}: ${reason}`);
+  console.warn(`[INTERRUPTING GAME] Room ${room.code}: ${reason} (Left by: ${leftBy || 'unknown'})`);
 
+  const now = Date.now();
   const report = await generateFinalReport(
     room.history,
     room.hostPlayerName,
@@ -608,15 +696,20 @@ async function interruptGame(room: Room, reason: string): Promise<void> {
     true,
     reason,
     room.gameMode,
-    room.aiTone
+    room.aiTone,
+    leftBy,
+    now
   );
 
   const updated: Room = {
     ...room,
     status: 'INTERRUPTED',
     interruptedReason: reason,
+    leftBy: leftBy || room.leftBy,
+    leftAt: now,
     finalReport: report,
-    updatedAt: Date.now(),
+    stateVersion: (room.stateVersion || 1) + 1,
+    updatedAt: now,
   };
 
   setRoom(updated);
@@ -678,8 +771,11 @@ function sanitizeRoom(room: Room) {
     history: room.history,
     finalReport: room.finalReport,
     interruptedReason: room.interruptedReason,
+    leftBy: room.leftBy,
+    leftAt: room.leftAt,
     gameMode: room.gameMode,
     aiTone: room.aiTone,
+    stateVersion: room.stateVersion || 1,
     updatedAt: room.updatedAt,
   };
 }

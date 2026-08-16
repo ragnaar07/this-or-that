@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { PlayerSession, RoomState } from '../types/game';
 import { Brand } from '../components/Brand';
+import { TigerMascot } from '../components/TigerMascot';
 import { downloadResultCard, shareResultCard } from '../utils/generateResultCard';
 
 interface ResultProps {
@@ -9,7 +10,7 @@ interface ResultProps {
   onPlayAgain: (selectedMode?: string) => void;
 }
 
-export function Result({ room, onPlayAgain }: ResultProps) {
+export function Result({ session, room, onPlayAgain }: ResultProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [revealStep, setRevealStep] = useState<number>(1); // 1 to 5
@@ -166,30 +167,49 @@ export function Result({ room, onPlayAgain }: ResultProps) {
           <>
             {/* Status Badge */}
             <div className={`result-badge ${isInterrupted ? 'result-badge--interrupted' : 'result-badge--complete'}`}>
-              {isInterrupted ? 'PARTIAL GAME RESULT 🛸' : 'GAME COMPLETE ⚡'}
+              {isInterrupted ? 'GAME ENDED 👋' : 'GAME COMPLETE ⚡'}
             </div>
 
             {/* Interrupted notice */}
             {isInterrupted && (
               <div className="interrupted-banner">
-                <div className="interrupted-title">OPPONENT LEFT THE ROOM 👋</div>
+                <div className="interrupted-title">
+                  {room.leftBy === 'both'
+                    ? 'BOTH PLAYERS LEFT 👋'
+                    : room.leftBy === session.role
+                    ? 'YOU LEFT THE GAME 👋'
+                    : 'YOUR OPPONENT LEFT 👋'}
+                </div>
                 <div className="interrupted-text">
-                  {room.interruptedReason || `Looks like someone escaped before the final verdict! 😂`}
+                  {room.leftBy === 'both'
+                    ? 'Both players left the match.'
+                    : room.leftBy === session.role
+                    ? 'Your current progress was saved.'
+                    : "Let's see how similar you two actually were."}
                   <br />
-                  <span style={{ fontSize: '0.78rem', opacity: 0.85, marginTop: 4, display: 'inline-block' }}>
-                    Based on the {completed} of {totalQuestions} questions you both answered.
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, opacity: 0.9, marginTop: 6, display: 'inline-block' }}>
+                    Based on the {completed} of {totalQuestions} rounds you actually answered.
                   </span>
                 </div>
               </div>
             )}
 
-            {/* Hero Score & Match Rate Card */}
+            {/* Hero Score & Match Rate Card with Tiger Mascot */}
             <div className="result-hero-card">
+              <div className="result-mascot-container">
+                <TigerMascot
+                  mood={isInterrupted ? 'opponentLeft' : matchPct >= 80 ? 'resultHigh' : matchPct >= 50 ? 'resultMedium' : 'resultLow'}
+                  position="result"
+                  size="lg"
+                  showSpeech={true}
+                />
+              </div>
+
               <div className="result-matchup-names">
-                {hostName} <span className="result-matchup-cross">×</span> {guestName}
+                {hostName} <span className="result-matchup-cross">⚡</span> {guestName}
               </div>
               <div className="result-match-pill">
-                {matchPct}% MATCH
+                {matchPct}% COMPATIBILITY
               </div>
               <div className="result-headline">
                 "{report?.headline || 'SAME BRAIN, DIFFERENT CHAOS'}"
@@ -198,7 +218,7 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                 Vibe: {report?.overallVibe || 'Cosmic Sync'}
               </div>
               <div className="result-score-sub">
-                {matches} / {completed} QUESTIONS MATCHED {isInterrupted ? `(${completed}/${totalQuestions} COMPLETED)` : ''}
+                <strong>{completed} ROUNDS PLAYED</strong> • <strong>{matches} MATCHES</strong> • <strong>{matchPct}% COMPATIBILITY</strong>
               </div>
             </div>
 
@@ -295,7 +315,7 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                 {/* Same Brain */}
                 {report.strongestMatches && report.strongestMatches.length > 0 && (
                   <div className="result-card result-card--match">
-                    <div className="result-card-title">⚡ SAME BRAIN</div>
+                    <div className="result-card-title">⚡ WHAT YOU AGREED ON</div>
                     <div className="result-card-subtitle">Where you two think 100% alike:</div>
                     <ul className="result-list">
                       {report.strongestMatches.map((m, idx) => (
@@ -308,7 +328,7 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                 {/* Opposite Energy */}
                 {report.biggestDifferences && report.biggestDifferences.length > 0 && (
                   <div className="result-card result-card--diff">
-                    <div className="result-card-title">⚡ OPPOSITE ENERGY</div>
+                    <div className="result-card-title">⚡ WHAT YOU DISAGREED ON</div>
                     <div className="result-card-subtitle">Where your instincts clashed:</div>
                     <ul className="result-list">
                       {report.biggestDifferences.map((d, idx) => (
@@ -321,7 +341,7 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                 {/* Surprising Patterns */}
                 {report.surprisingPatterns && report.surprisingPatterns.length > 0 && (
                   <div className="result-card result-card--patterns">
-                    <div className="result-card-title">🔍 YOUR HIDDEN PATTERNS</div>
+                    <div className="result-card-title">🔍 BIGGEST SURPRISE / HIDDEN PATTERNS</div>
                     <ul className="result-list">
                       {report.surprisingPatterns.map((p, idx) => (
                         <li key={idx}>💡 {p}</li>
@@ -353,7 +373,7 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                 {/* Chaos Award */}
                 {report.funniestDifference && (
                   <div className="result-card result-card--chaos">
-                    <div className="result-card-title">😂 CHAOS AWARD</div>
+                    <div className="result-card-title">😂 FUNNIEST DIFFERENCE</div>
                     <div className="result-card-content">"{report.funniestDifference}"</div>
                   </div>
                 )}
@@ -461,6 +481,16 @@ export function Result({ room, onPlayAgain }: ResultProps) {
                   </div>
                 )}
               </div>
+
+              {/* Home Button */}
+              <button
+                className="btn btn--secondary"
+                onClick={() => onPlayAgain()}
+                id="result-home-btn"
+                style={{ marginTop: 6 }}
+              >
+                🏠 GO HOME
+              </button>
             </div>
           </>
         )}

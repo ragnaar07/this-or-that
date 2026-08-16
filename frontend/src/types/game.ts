@@ -103,6 +103,8 @@ export interface FinalReport {
   finalVerdict: string;
   isPartial: boolean;
   interruptedReason?: string;
+  leftBy?: 'host' | 'guest' | 'both';
+  leftAt?: number;
   gameMode?: string;
   aiTone?: 'nice' | 'fun' | 'brutal';
   generatedAt: number;
@@ -136,8 +138,11 @@ export interface RoomState {
   history: RoundHistoryItem[];
   finalReport: FinalReport | null;
   interruptedReason?: string;
+  leftBy?: 'host' | 'guest' | 'both';
+  leftAt?: number;
   gameMode?: string;
   aiTone?: 'nice' | 'fun' | 'brutal';
+  stateVersion?: number;
   updatedAt: number;
 }
 

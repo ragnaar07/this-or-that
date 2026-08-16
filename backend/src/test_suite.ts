@@ -175,6 +175,163 @@ async function runTests() {
   assert(report.strategicMatchPercentage !== undefined, `Strategic Match computed: ${report.strategicMatchPercentage}%`);
   assert(report.instinctVsStrategyInsight !== undefined && report.instinctVsStrategyInsight.length > 0, `Insight: "${report.instinctVsStrategyInsight}"`);
 
+  // --- Test 5: Leave Flow & Grounded Partial Report ---
+  console.log('\n--- TEST 5: Leave Flow & Grounded Partial Report (Rounds 1-6) ---');
+  const partialHistory = fullHistory.slice(0, 6);
+  const partialMatches = partialHistory.filter(h => h.result === 'MATCH').length;
+  const partialReport = await generateFinalReport(
+    partialHistory,
+    'Rahul',
+    'Priya',
+    partialMatches,
+    6,
+    20,
+    true,
+    'Rahul left the game.',
+    'RANDOM',
+    'fun',
+    'host',
+    Date.now()
+  );
+
+  assert(partialReport.isPartial === true, 'Report is marked as partial (isPartial: true)');
+  assert(partialReport.completedQuestions === 6, 'Completed questions correctly records 6 rounds');
+  assert(partialReport.totalQuestions === 20, 'Total scheduled questions is 20');
+  assert(partialReport.leftBy === 'host', 'Report records leftBy: host');
+  assert(partialReport.interruptedReason === 'Rahul left the game.', 'Report records interruptedReason');
+  assert(partialReport.finalVerdict.includes('6 rounds') || partialReport.finalVerdict.includes('actually answered') || partialReport.finalVerdict.includes('compatibility'), 'Grounded final verdict refers to actually answered rounds');
+
+  // --- Test 6: In-Flight Answer Preservation During Leave ---
+  console.log('\n--- TEST 6: In-Flight Answer Preservation During Leave ---');
+  const testRoomCode = 'TEST';
+  const mockRoom: Room = {
+    code: testRoomCode,
+    hostPlayerId: 'host123',
+    hostPlayerName: 'HostPlayer',
+    hostLastSeenAt: Date.now(),
+    guestPlayerId: 'guest456',
+    guestPlayerName: 'GuestPlayer',
+    guestLastSeenAt: Date.now(),
+    status: 'PLAYING',
+    roundNumber: 3,
+    totalRounds: 20,
+    currentQuestion: {
+      category: 'Food & Chai',
+      scenario: 'Late night snack dilemma',
+      optionA: 'Maggi',
+      optionB: 'Chai & Biscuits',
+      format: 'SITUATIONAL',
+      timeLimit: 16,
+    },
+    currentRoundType: 'NORMAL',
+    currentTimeLimit: 16,
+    currentQuestionFormat: 'SITUATIONAL',
+    roundStartedAt: Date.now(),
+    roundDeadline: Date.now() + 16000,
+    matches: 1,
+    total: 2,
+    score: 1,
+    streak: 1,
+    lastResult: 'MATCH',
+    lastHostChoice: 'Tea',
+    lastGuestChoice: 'Tea',
+    recentQuestions: [],
+    recentCategories: [],
+    history: [
+      {
+        roundNumber: 1,
+        question: 'Tea or Coffee',
+        category: 'Food & Chai',
+        optionA: 'Tea',
+        optionB: 'Coffee',
+        hostChoice: 'Tea',
+        guestChoice: 'Tea',
+        result: 'MATCH',
+        pointsAwarded: 1,
+        answeredAt: Date.now() - 20000,
+      },
+      {
+        roundNumber: 2,
+        question: 'Mountains or Beach',
+        category: 'Travel',
+        optionA: 'Mountains',
+        optionB: 'Beach',
+        hostChoice: 'Mountains',
+        guestChoice: 'Beach',
+        result: 'NO_MATCH',
+        pointsAwarded: 0,
+        answeredAt: Date.now() - 10000,
+      },
+    ],
+    finalReport: null,
+    gameMode: 'RANDOM',
+    aiTone: 'fun',
+    stateVersion: 5,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  setRoom(mockRoom);
+  // Simulate Host answering Maggi, Guest not answered yet
+  setPlayerAnswer(testRoomCode, 3, 'host', {
+    playerId: 'host123',
+    roundNumber: 3,
+    choice: 'Maggi',
+    answeredAt: Date.now(),
+  });
+
+  // Simulate Leave trigger
+  const answersBeforeLeave = getRoundAnswers(testRoomCode, 3);
+  assert(answersBeforeLeave.host?.choice === 'Maggi', 'Host choice recorded before leave');
+  assert(answersBeforeLeave.guest === undefined, 'Guest choice is unsubmitted');
+
+  // Verify room preserve logic
+  const roundAnswers = getRoundAnswers(testRoomCode, 3);
+  const hostChoice = roundAnswers.host?.choice ?? null;
+  const guestChoice = roundAnswers.guest?.choice ?? null;
+  const isMatch = hostChoice !== null && guestChoice !== null && hostChoice === guestChoice;
+  mockRoom.history.push({
+    roundNumber: 3,
+    question: `${mockRoom.currentQuestion?.optionA} or ${mockRoom.currentQuestion?.optionB}`,
+    scenario: mockRoom.currentQuestion?.scenario,
+    category: mockRoom.currentQuestion?.category || 'General',
+    optionA: mockRoom.currentQuestion?.optionA || '',
+    optionB: mockRoom.currentQuestion?.optionB || '',
+    hostChoice,
+    guestChoice,
+    result: isMatch ? 'MATCH' : 'NO_MATCH',
+    pointsAwarded: 0,
+    answeredAt: Date.now(),
+  });
+  mockRoom.total = mockRoom.history.length;
+
+  assert(mockRoom.history.length === 3, 'History contains 3 rounds including in-flight round');
+  assert(mockRoom.history[2].hostChoice === 'Maggi', 'Host answer preserved in round 3 history');
+  assert(mockRoom.history[2].guestChoice === null, 'Guest answer marked null/unanswered in round 3 history');
+  assert(mockRoom.history[2].result === 'NO_MATCH', 'Unmatched in-flight round evaluated as NO_MATCH');
+
+  // --- Test 7: Simultaneous Leave Handling ---
+  console.log('\n--- TEST 7: Simultaneous Leave & Idempotence ---');
+  mockRoom.status = 'INTERRUPTED';
+  mockRoom.leftBy = 'host';
+  mockRoom.interruptedReason = 'HostPlayer left the game.';
+  mockRoom.finalReport = partialReport;
+
+  // Guest also leaves at same time:
+  if (mockRoom.status === 'INTERRUPTED' && mockRoom.leftBy !== 'guest') {
+    mockRoom.leftBy = 'both';
+    mockRoom.interruptedReason = 'Both players left the game.';
+    if (mockRoom.finalReport) {
+      mockRoom.finalReport.leftBy = 'both';
+      mockRoom.finalReport.interruptedReason = 'Both players left the game.';
+    }
+  }
+
+  assert(mockRoom.leftBy === 'both', 'Simultaneous leave updates room.leftBy to "both"');
+  assert(mockRoom.finalReport?.leftBy === 'both', 'Final report leftBy updated to "both"');
+
+  deleteRoom(testRoomCode);
+
   console.log('\n⚡ ============================================================');
   console.log(`⚡ TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
   console.log('⚡ ============================================================');

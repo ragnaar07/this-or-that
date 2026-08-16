@@ -1,5 +1,6 @@
 import { useState, useId } from 'react';
 import { Brand } from '../components/Brand';
+import { TigerMascot } from '../components/TigerMascot';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { api } from '../services/api';
 import type { PlayerSession, RoomState } from '../types/game';
@@ -88,29 +89,15 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
 
   return (
     <div className="app-wrapper">
-      {/* Top-right floating buttons */}
-      <div className="top-nav-actions">
-        <button
-          className="top-nav-btn top-nav-btn--how"
-          onClick={onOpenHowToPlay}
-          aria-label="How to play THIS THAT"
-          id="top-howtoplay-btn"
-        >
-          🎮 HOW TO PLAY
-        </button>
-
-        <button
-          className="top-nav-btn top-nav-btn--about"
-          onClick={onOpenAbout}
-          aria-label="About THIS THAT and SYNQ"
-          id="top-about-btn"
-        >
-          💡 ABOUT US
-        </button>
-      </div>
-
       <div className="screen">
         <Brand />
+
+        {/* 3D Tiger Mascot — Living Homepage Character */}
+        <TigerMascot
+          mode="homepage"
+          interactive={true}
+          showSpeech={true}
+        />
 
         <div className="card">
           {/* Name input */}

@@ -1,6 +1,7 @@
 import type { PlayerSession, RoomState } from '../types/game';
 import { api } from '../services/api';
 import { usePolling } from '../hooks/usePolling';
+import { TigerMascot } from '../components/TigerMascot';
 
 interface LobbyProps {
   session: PlayerSession;
@@ -29,6 +30,16 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
   return (
     <div className="app-wrapper">
       <div className="screen">
+        {/* Mascot in Lobby */}
+        <div className="lobby-mascot-container">
+          <TigerMascot
+            mood="waiting"
+            position="lobby"
+            size="md"
+            showSpeech={true}
+          />
+        </div>
+
         {/* Lobby ticket */}
         <div className="lobby-ticket">
           <div className="ticket-label">YOUR ROOM</div>

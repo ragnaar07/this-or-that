@@ -37,10 +37,11 @@ export function GameHeader({ matches, total, hostName, guestName, onLeave }: Gam
         <button
           className="leave-btn"
           onClick={onLeave}
-          aria-label="Leave game"
+          aria-label="Leave game and view results"
           id="leave-game-btn"
         >
-          LEAVE
+          <span className="leave-btn-icon" aria-hidden="true">🚪</span>
+          <span className="leave-btn-text">LEAVE</span>
         </button>
       </div>
     </header>

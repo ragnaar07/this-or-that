@@ -1,0 +1,525 @@
+/* ============================================================
+   3D CARTOON TIGER MASCOT — PREMIUM STYLING & ANIMATIONS
+   ============================================================ */
+
+/* ── Mascot Wrapper ── */
+.tiger-mascot-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+  will-change: transform;
+}
+
+/* ── Sizing Variants ── */
+.tiger-mascot--sm  { width: 64px; height: 72px; }
+.tiger-mascot--md  { width: 96px; height: 108px; }
+.tiger-mascot--lg  { width: 130px; height: 146px; }
+.tiger-mascot--hero { width: 155px; height: 174px; }
+
+/* ── SVG Rendering ── */
+.tiger-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+  filter: drop-shadow(0 4px 10px rgba(26, 0, 48, 0.12));
+  transition: filter 0.3s ease;
+}
+
+/* ── Homepage Mascot Area Container ── */
+.home-mascot-area {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  margin: -10px 0 8px;
+  overflow: visible;
+  z-index: 5;
+}
+
+@media (max-width: 480px) {
+  .home-mascot-area {
+    height: 170px;
+    margin: -6px 0 4px;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-mascot-area {
+    height: 150px;
+    margin: -4px 0 2px;
+  }
+}
+
+/* ── Tiger Wanderer — absolute positioned inside mascot area ── */
+.tiger-wanderer {
+  position: absolute;
+  bottom: 0;
+  will-change: transform;
+  transition: none; /* Position managed by rAF */
+}
+
+/* ── Interaction Hit Area — clickable overlay ── */
+.tiger-hit-area {
+  position: absolute;
+  bottom: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 11;
+  /* Slightly larger than the tiger for easier tapping */
+  width: 120%;
+  height: 120%;
+  transform: translate(-10%, -5%);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Food Item ── */
+.tiger-food-item {
+  position: absolute;
+  bottom: 10px;
+  font-size: 1.6rem;
+  pointer-events: none;
+  z-index: 9;
+  animation: food-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+
+.tiger-food-item--vanishing {
+  animation: food-pop-out 0.3s ease-in both;
+}
+
+.tiger-food-item--caught {
+  animation: food-chomp 0.3s ease-in both;
+}
+
+/* ── Speech Bubble ── */
+.tiger-speech-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 2px solid var(--color-border);
+  border-radius: 16px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 0 var(--color-border), 0 6px 16px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  max-width: 240px;
+  min-width: 100px;
+  text-align: center;
+  z-index: 15;
+  animation: speech-pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none;
+}
+
+.tiger-speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px 7px 0;
+  border-style: solid;
+  border-color: var(--color-border) transparent transparent;
+  display: block;
+  width: 0;
+}
+
+.tiger-speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-2px);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: #ffffff transparent transparent;
+  display: block;
+  width: 0;
+  z-index: 1;
+}
+
+.tiger-speech-text {
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.25;
+  letter-spacing: 0.2px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sparkles / Confetti ── */
+.tiger-sparks {
+  position: absolute;
+  inset: -12px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.tiger-spark-dot {
+  position: absolute;
+  border-radius: 50%;
+  animation: spark-float 1.2s ease-out infinite;
+}
+
+/* ── Question Mark (confused reaction) ── */
+.tiger-question-mark {
+  position: absolute;
+  top: -20px;
+  right: -5px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--color-violet);
+  animation: question-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none;
+  z-index: 16;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* ── Page Layout Containers ── */
+.home-mascot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: -10px 0 10px;
+  z-index: 5;
+}
+
+.game-mascot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: -8px 0 4px;
+}
+
+.reveal-mascot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0;
+}
+
+.result-mascot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+
+.lobby-mascot-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 4px 0 12px;
+}
+
+/* ── Tail Animations ── */
+.tiger-tail--idle {
+  animation: tiger-tail-swish 2.2s ease-in-out infinite alternate;
+}
+
+.tiger-tail--wag {
+  animation: tiger-tail-wag 0.8s ease-in-out infinite alternate;
+}
+
+.tiger-tail--excited {
+  animation: tiger-tail-excited 0.3s ease-in-out infinite alternate;
+}
+
+.tiger-tail--droop {
+  animation: tiger-tail-droop 3s ease-in-out infinite alternate;
+}
+
+.tiger-tail--alert {
+  animation: tiger-tail-alert 0.5s ease-in-out infinite alternate;
+}
+
+/* ── Paw Wave Animation ── */
+.tiger-paw-wave {
+  animation: tiger-paw-wave 0.6s ease-in-out infinite alternate;
+  transform-origin: center center;
+}
+
+/* ── Ear Idle Twitch ── */
+.tiger-ear-l {
+  animation: tiger-ear-twitch-l 4.5s ease-in-out infinite;
+}
+
+.tiger-ear-r {
+  animation: tiger-ear-twitch-r 4.5s ease-in-out infinite 0.2s;
+}
+
+/* ── Body Breathing (for static/idle mascot on game pages) ── */
+.tiger-body {
+  transform-origin: center bottom;
+  animation: tiger-breathe 2.8s ease-in-out infinite;
+}
+
+/* ── Mood Animations for Game Pages ── */
+.tiger-mascot--match .tiger-svg,
+.tiger-mascot--celebrate .tiger-svg,
+.tiger-mascot--resultHigh .tiger-svg {
+  animation: tiger-celebrate-jump 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+
+.tiger-mascot--match .tiger-tail,
+.tiger-mascot--celebrate .tiger-tail,
+.tiger-mascot--resultHigh .tiger-tail {
+  animation: tiger-tail-excited 0.3s ease-in-out infinite alternate !important;
+}
+
+.tiger-mascot--funny .tiger-svg,
+.tiger-mascot--chaos .tiger-svg {
+  animation: tiger-laugh-shake 0.35s ease-in-out infinite alternate;
+}
+
+.tiger-mascot--edge .tiger-svg {
+  animation: tiger-edge-lean 2s ease-in-out infinite alternate;
+}
+
+.tiger-mascot--timeout .tiger-svg {
+  animation: tiger-timeout-jitter 0.18s ease-in-out infinite alternate;
+}
+
+.tiger-mascot--opponentLeft .tiger-svg {
+  animation: tiger-droop 2.5s ease-in-out infinite alternate;
+}
+
+.tiger-mascot--waiting .tiger-svg {
+  animation: tiger-waiting-bob 1.8s ease-in-out infinite;
+}
+
+/* ── Reaction Animations ── */
+.tiger-react--surprised .tiger-svg {
+  animation: tiger-react-surprised 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.tiger-react--duck .tiger-svg {
+  animation: tiger-react-duck 0.5s ease-in-out both;
+}
+
+.tiger-react--excited .tiger-svg {
+  animation: tiger-celebrate-jump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes tiger-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.018, 0.988) translateY(-1.5px); }
+}
+
+@keyframes tiger-tail-swish {
+  0% { transform: rotate(-12deg); }
+  100% { transform: rotate(16deg); }
+}
+
+@keyframes tiger-tail-wag {
+  0% { transform: rotate(-18deg); }
+  100% { transform: rotate(22deg); }
+}
+
+@keyframes tiger-tail-excited {
+  0% { transform: rotate(-28deg); }
+  100% { transform: rotate(32deg); }
+}
+
+@keyframes tiger-tail-droop {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(-15deg) translateY(3px); }
+}
+
+@keyframes tiger-tail-alert {
+  0% { transform: rotate(5deg); }
+  100% { transform: rotate(15deg); }
+}
+
+@keyframes tiger-ear-twitch-l {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  92% { transform: rotate(-8deg); }
+  96% { transform: rotate(4deg); }
+}
+
+@keyframes tiger-ear-twitch-r {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  92% { transform: rotate(8deg); }
+  96% { transform: rotate(-4deg); }
+}
+
+@keyframes tiger-paw-wave {
+  0% { transform: rotate(-12deg); }
+  100% { transform: rotate(12deg); }
+}
+
+@keyframes tiger-celebrate-jump {
+  0% { transform: translateY(0) scale(1, 0.95); }
+  100% { transform: translateY(-16px) scale(0.96, 1.05); }
+}
+
+@keyframes tiger-laugh-shake {
+  0% { transform: rotate(-3deg) scale(1); }
+  100% { transform: rotate(3deg) scale(1.04); }
+}
+
+@keyframes tiger-edge-lean {
+  0% { transform: translateX(-4px) rotate(-3deg) scale(1.02); }
+  100% { transform: translateX(4px) rotate(3deg) scale(1.02); }
+}
+
+@keyframes tiger-timeout-jitter {
+  0% { transform: translate(-1.5px, -1px); }
+  100% { transform: translate(1.5px, 1px); }
+}
+
+@keyframes tiger-droop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(4px) rotate(-4deg); }
+}
+
+@keyframes tiger-waiting-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-4px) rotate(-3deg); }
+  75% { transform: translateY(-2px) rotate(3deg); }
+}
+
+@keyframes tiger-react-surprised {
+  0% { transform: scale(1) translateY(0); }
+  40% { transform: scale(1.12, 0.9) translateY(-10px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes tiger-react-duck {
+  0% { transform: scale(1) translateY(0); }
+  40% { transform: scale(1.15, 0.7) translateY(12px); }
+  70% { transform: scale(1.05, 0.85) translateY(8px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+/* ── Speech Bubble ── */
+@keyframes speech-pop-in {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.85); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ── Sparkles ── */
+@keyframes spark-float {
+  0% { opacity: 1; transform: translateY(0) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-20px) scale(1.4); }
+}
+
+/* ── Food ── */
+@keyframes food-pop-in {
+  0% { opacity: 0; transform: scale(0) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.2) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes food-pop-out {
+  0% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.3) translateY(-15px); }
+}
+
+@keyframes food-chomp {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(0); }
+}
+
+/* ── Question Mark ── */
+@keyframes question-pop {
+  0% { opacity: 0; transform: scale(0) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.3) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Walking Bounce ── */
+@keyframes tiger-walk-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes tiger-run-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ============================================================
+   RESPONSIVE SCALING
+   ============================================================ */
+
+@media (max-width: 480px) {
+  .tiger-mascot--hero { width: 125px; height: 140px; }
+  .tiger-mascot--lg { width: 105px; height: 118px; }
+  .tiger-mascot--md { width: 80px; height: 90px; }
+  .tiger-speech-bubble {
+    max-width: 180px;
+    padding: 4px 10px;
+  }
+  .tiger-speech-text { font-size: 0.72rem; }
+  .tiger-food-item { font-size: 1.3rem; }
+}
+
+@media (max-width: 360px) {
+  .tiger-mascot--hero { width: 105px; height: 118px; }
+  .tiger-mascot--lg { width: 90px; height: 101px; }
+  .tiger-speech-bubble {
+    max-width: 150px;
+    padding: 3px 8px;
+  }
+  .tiger-speech-text { font-size: 0.68rem; }
+  .tiger-food-item { font-size: 1.1rem; }
+}
+
+/* ============================================================
+   ACCESSIBILITY — prefers-reduced-motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .tiger-body,
+  .tiger-tail,
+  .tiger-tail--idle,
+  .tiger-tail--wag,
+  .tiger-tail--excited,
+  .tiger-tail--droop,
+  .tiger-tail--alert,
+  .tiger-ear-l,
+  .tiger-ear-r,
+  .tiger-paw-wave,
+  .tiger-mascot--match .tiger-svg,
+  .tiger-mascot--celebrate .tiger-svg,
+  .tiger-mascot--resultHigh .tiger-svg,
+  .tiger-mascot--funny .tiger-svg,
+  .tiger-mascot--chaos .tiger-svg,
+  .tiger-mascot--edge .tiger-svg,
+  .tiger-mascot--timeout .tiger-svg,
+  .tiger-mascot--opponentLeft .tiger-svg,
+  .tiger-mascot--waiting .tiger-svg,
+  .tiger-react--surprised .tiger-svg,
+  .tiger-react--duck .tiger-svg,
+  .tiger-react--excited .tiger-svg,
+  .tiger-speech-bubble,
+  .tiger-food-item,
+  .tiger-question-mark {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Keep very subtle breathe only */
+  .tiger-body {
+    animation: tiger-breathe 4s ease-in-out infinite !important;
+  }
+}

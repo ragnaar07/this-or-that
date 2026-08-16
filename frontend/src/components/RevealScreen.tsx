@@ -1,4 +1,5 @@
 import type { GameResult, RoundType } from '../types/game';
+import { TigerMascot } from './TigerMascot';
 
 interface RevealScreenProps {
   result: GameResult;
@@ -49,6 +50,16 @@ export function RevealScreen({
           ⚠️ CHAOS ROUND VERDICT
         </div>
       )}
+
+      {/* Mascot in Reveal */}
+      <div className="reveal-mascot-container">
+        <TigerMascot
+          mood={isMatch ? 'match' : roundType === 'CHAOS' ? 'chaos' : 'noMatch'}
+          position="reveal"
+          size="lg"
+          showSpeech={true}
+        />
+      </div>
 
       {/* Big result text */}
       <div className="reveal-result">

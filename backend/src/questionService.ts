@@ -458,7 +458,9 @@ export async function generateFinalReport(
   isPartial: boolean,
   interruptedReason?: string,
   gameMode = 'RANDOM',
-  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun',
+  leftBy?: 'host' | 'guest' | 'both',
+  leftAt?: number
 ): Promise<FinalReport> {
   const matchPercentage = totalCompleted > 0 ? Math.round((matches / totalCompleted) * 100) : 0;
   const categoryScores = computeCategoryScores(history);
@@ -493,7 +495,12 @@ export async function generateFinalReport(
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey && geminiKey !== 'your_gemini_key_here') {
     try {
-      const report = await generateReportWithGemini(
+      // 3.5s timeout promise race so AI never hangs or blocks the players
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Gemini generation timeout (3.5s limit)')), 3500);
+      });
+
+      const reportPromise = generateReportWithGemini(
         geminiKey,
         history,
         hostName,
@@ -513,12 +520,16 @@ export async function generateFinalReport(
         isPartial,
         interruptedReason,
         gameMode,
-        aiTone
+        aiTone,
+        leftBy,
+        leftAt
       );
+
+      const report = await Promise.race([reportPromise, timeoutPromise]);
       console.log(`[AI:Gemini] ✨ Generated V5 Report: "${report.headline}" (${report.matchPercentage}% match) [Tone: ${aiTone}]`);
       return report;
     } catch (err) {
-      console.error('[AI:Gemini] Final report fallback:', err);
+      console.warn('[AI:Gemini] Final report fast fallback triggered:', err);
     }
   }
 
@@ -541,7 +552,9 @@ export async function generateFinalReport(
     isPartial,
     interruptedReason,
     gameMode,
-    aiTone
+    aiTone,
+    leftBy,
+    leftAt
   );
 }
 
@@ -567,7 +580,9 @@ async function generateReportWithGemini(
   isPartial: boolean,
   interruptedReason?: string,
   gameMode = 'RANDOM',
-  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun',
+  leftBy?: 'host' | 'guest' | 'both',
+  leftAt?: number
 ): Promise<FinalReport> {
   const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -586,7 +601,7 @@ async function generateReportWithGemini(
   const prompt = `You are the clever, witty entertainment insight engine for THIS ⚡ THAT, an India-first multiplayer social game.
 Player 1: ${hostName}
 Player 2: ${guestName}
-Game Status: ${isPartial ? `PARTIAL (${totalCompleted} of ${totalRounds} rounds completed)` : `COMPLETE (${totalCompleted} of ${totalRounds} rounds completed)`}
+Game Status: ${isPartial ? `PARTIAL (${totalCompleted} of ${totalRounds} rounds actually answered before game stopped)` : `COMPLETE (${totalCompleted} of ${totalRounds} rounds completed)`}
 Overall Match Rate: ${matchPercentage}% (${matches} of ${totalCompleted} matched) | Score: ${totalScore}/${maxPossible}
 Instinct Match (Quick Choices): ${instinctMatchPercentage}%
 Strategic Match (Situational Dilemmas): ${strategicMatchPercentage}%
@@ -608,7 +623,7 @@ CRITICAL RULES:
 1. Make them say: "BRO... HOW DID THIS GAME KNOW THAT? 😂".
 2. Compare their Quick Instinct vs Situational Strategy choices with humor.
 3. GROUND EVERY OBSERVATION in their actual answers.
-4. Catch hilarious contradictions.
+${isPartial ? `4. STRICT GROUNDING: Since this game ended early after ${totalCompleted} rounds, only base insights on the ${totalCompleted} rounds answered. Use phrases like "Based on the ${totalCompleted} rounds you actually answered...", "Your answers suggest...", "Your choices indicate...". Do NOT invent answers or assume unplayed rounds.` : '4. Catch hilarious contradictions.'}
 5. Return JSON ONLY matching this structure:
 
 {
@@ -695,6 +710,8 @@ CRITICAL RULES:
         finalVerdict: String(parsed.finalVerdict || `You scored ${matchPercentage}% synchronization! Whether you are cosmic twins or entertaining opposites, your dynamic makes every decision an adventure.`),
         isPartial,
         interruptedReason,
+        leftBy,
+        leftAt,
         gameMode,
         aiTone,
         generatedAt: Date.now(),
@@ -728,24 +745,34 @@ function generateLocalFallbackReport(
   isPartial: boolean,
   interruptedReason?: string,
   gameMode = 'RANDOM',
-  aiTone: 'nice' | 'fun' | 'brutal' = 'fun'
+  aiTone: 'nice' | 'fun' | 'brutal' = 'fun',
+  leftBy?: 'host' | 'guest' | 'both',
+  leftAt?: number
 ): FinalReport {
   let headline = 'SAME BRAIN, DIFFERENT CHAOS';
   let overallVibe = 'High Voltage Sync';
-  let finalVerdict = `${hostName} and ${guestName} achieved a ${matchPercentage}% synchronization score! Whether locking in on chai or debating wild superpowers, your dynamic is peak entertainment.`;
+  let finalVerdict = isPartial
+    ? `Based on the ${totalCompleted} rounds you actually answered, you scored ${matchPercentage}% compatibility (${matches}/${totalCompleted} matches). Your dynamic makes every choice an adventure!`
+    : `${hostName} and ${guestName} achieved a ${matchPercentage}% synchronization score! Whether locking in on chai or debating wild superpowers, your dynamic is peak entertainment.`;
 
   if (matchPercentage >= 80) {
     headline = '⚡ CERTIFIED TWIN MINDS';
     overallVibe = 'Cosmic Telepathy';
-    finalVerdict = `Uncanny ${matchPercentage}% synchronization! ${hostName} and ${guestName} are operating on the exact same frequency.`;
+    finalVerdict = isPartial
+      ? `Based on the ${totalCompleted} rounds answered, you scored an uncanny ${matchPercentage}% telepathic match! You two are operating on the exact same frequency.`
+      : `Uncanny ${matchPercentage}% synchronization! ${hostName} and ${guestName} are operating on the exact same frequency.`;
   } else if (matchPercentage >= 60) {
     headline = '🔥 BALANCED SQUAD ENERGY';
     overallVibe = 'Harmonious Vibes';
-    finalVerdict = `At ${matchPercentage}% sync, you agree on what matters most while keeping enough different flavor to never get bored.`;
+    finalVerdict = isPartial
+      ? `Based on the ${totalCompleted} rounds answered, you achieved a strong ${matchPercentage}% sync rate! You agree on what matters while keeping distinct flavors.`
+      : `At ${matchPercentage}% sync, you agree on what matters most while keeping enough different flavor to never get bored.`;
   } else if (matchPercentage <= 35) {
     headline = '💀 COMPLETE ENTERTAINING OPPOSITES';
     overallVibe = 'Opposite Poles';
-    finalVerdict = `Only ${matchPercentage}% agreement! You two inhabit parallel universes, which guarantees zero silence and endless debates.`;
+    finalVerdict = isPartial
+      ? `Based on the ${totalCompleted} rounds answered, you scored ${matchPercentage}% agreement! You two inhabit parallel universes, which guarantees endless debates.`
+      : `Only ${matchPercentage}% agreement! You two inhabit parallel universes, which guarantees zero silence and endless debates.`;
   }
 
   const matchedItems = history.filter(h => h.result === 'MATCH');
@@ -796,6 +823,8 @@ function generateLocalFallbackReport(
     finalVerdict,
     isPartial,
     interruptedReason,
+    leftBy,
+    leftAt,
     gameMode,
     aiTone,
     generatedAt: Date.now(),

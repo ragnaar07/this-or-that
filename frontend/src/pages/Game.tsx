@@ -6,6 +6,7 @@ import { GameHeader } from '../components/GameHeader';
 import { Countdown } from '../components/Countdown';
 import { OptionButton } from '../components/OptionButton';
 import { RevealScreen } from '../components/RevealScreen';
+import { TigerMascot } from '../components/TigerMascot';
 
 interface GameProps {
   session: PlayerSession;
@@ -14,7 +15,7 @@ interface GameProps {
   onLeave: () => void;
 }
 
-export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps) {
+export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const [room, setRoom] = useState<RoomState>(initialRoom);
   const [myChoice, setMyChoice] = useState<string | null>(null);
   const [myPrediction, setMyPrediction] = useState<string | null>(null);
@@ -33,7 +34,32 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
   const isChaosRound = room.currentRoundType === 'CHAOS';
   const isDoublePointsRound = room.currentRoundType === 'DOUBLE_POINTS';
 
-  // Check for game completion / interruption
+  // Intercept browser / Android back button to show leave confirmation modal
+  useEffect(() => {
+    window.history.pushState({ inGame: true }, '');
+    function handlePopState() {
+      window.history.pushState({ inGame: true }, '');
+      setShowLeaveModal(true);
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Prevent accidental tab closing during active play
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (room.status === 'PLAYING' || room.status === 'REVEALING') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [room.status]);
+
+  // Check for game completion / interruption -> Route directly to Result screen
   useEffect(() => {
     if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
       console.log(`[GAME] Status is ${room.status}. Transitioning to Result screen...`);
@@ -52,14 +78,18 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
     }
   }, [room.roundNumber, room.currentRoundType, lastRoundNumber]);
 
-  // Polling — 700ms sequential polling for near-realtime feel
+  // Polling — 700ms sequential polling for near-realtime feel with monotonic version checking
   const pollRoom = useCallback(async () => {
     if (isLeaving) return;
     try {
       const res = await api.pollRoom(session.roomCode, session.playerId);
       if (res.room) {
         setRoom((prev) => {
-          if (!prev || res.room!.updatedAt >= prev.updatedAt) {
+          if (!prev) return res.room!;
+          const prevVer = prev.stateVersion || 0;
+          const newVer = res.room!.stateVersion || 0;
+          // Apply only if newer version or timestamp, preventing older out-of-order responses
+          if (newVer > prevVer || (newVer === prevVer && res.room!.updatedAt >= prev.updatedAt)) {
             return res.room!;
           }
           return prev;
@@ -101,7 +131,7 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
   }, [room.status, room.roundNumber, room.totalRounds, isPredictionRound, session.role, session.roomCode, session.playerId, isLeaving]);
 
   async function handleOptionClick(choice: string) {
-    if (room.status !== 'PLAYING' || !room.currentQuestion) return;
+    if (room.status !== 'PLAYING' || !room.currentQuestion || isLeaving) return;
 
     // In Prediction rounds: Step 1 = Predict opponent choice
     if (isPredictionRound && myPrediction === null) {
@@ -131,7 +161,10 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
 
       if (res.room) {
         setRoom((prev) => {
-          if (!prev || res.room!.updatedAt >= prev.updatedAt) {
+          if (!prev) return res.room!;
+          const prevVer = prev.stateVersion || 0;
+          const newVer = res.room!.stateVersion || 0;
+          if (newVer > prevVer || (newVer === prevVer && res.room!.updatedAt >= prev.updatedAt)) {
             return res.room!;
           }
           return prev;
@@ -150,16 +183,26 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
     setShowLeaveModal(false);
     setIsLeaving(true);
     try {
+      console.log(`[GAME] Player confirmed leave for room ${session.roomCode}. Requesting authoritative leave from server...`);
       const res = await api.leaveRoom(session.roomCode, session.playerId);
-      if (res.room && (res.room.status === 'INTERRUPTED' || res.room.status === 'FINISHED')) {
+      if (res.room) {
         onGameFinish(res.room);
         return;
       }
     } catch (err) {
       console.error('[GAME] Leave error:', err);
-    } finally {
-      onLeave();
     }
+
+    // Fallback: If network drops during leave, construct partial room and route to result
+    const partialRoom: RoomState = {
+      ...room,
+      status: 'INTERRUPTED',
+      interruptedReason: `${session.playerName} left the game.`,
+      leftBy: session.role,
+      leftAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    onGameFinish(partialRoom);
   }
 
   const q = room.currentQuestion;
@@ -178,6 +221,19 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
     }
   }
 
+  // Dynamic Tiger Mascot Mood during gameplay
+  const tigerGameMood = (hasAnswered)
+    ? 'waiting'
+    : isChaosRound || q?.type === 'CHAOS'
+    ? 'chaos'
+    : q?.type === 'FUNNY'
+    ? 'funny'
+    : q?.type === 'EDGE'
+    ? 'edge'
+    : isPredictionRound
+    ? 'curious'
+    : 'focused';
+
   return (
     <>
       {/* Fixed header with score + leave */}
@@ -193,9 +249,9 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
       {showLeaveModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="leave-dialog-title">
           <div className="modal-card">
-            <div className="modal-title" id="leave-dialog-title">LEAVE GAME? 👋</div>
+            <div className="modal-title" id="leave-dialog-title">Leave this game? 👋</div>
             <div className="modal-body">
-              If you leave now, the game will stop and a partial result will be generated from the questions answered so far.
+              Your current progress will be saved and both players will receive the final result.
             </div>
             <div className="modal-actions">
               <button
@@ -203,14 +259,14 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
                 onClick={() => setShowLeaveModal(false)}
                 id="cancel-leave-btn"
               >
-                STAY & PLAY
+                STAY
               </button>
               <button
                 className="btn btn--nomatch"
                 onClick={handleConfirmLeave}
                 id="confirm-leave-btn"
               >
-                YES, LEAVE
+                LEAVE
               </button>
             </div>
           </div>
@@ -272,6 +328,17 @@ export function Game({ session, initialRoom, onGameFinish, onLeave }: GameProps)
                 🧠 THINK FAST (16s)
               </div>
             )}
+
+            {/* In-Game Mascot */}
+            <div className="game-mascot-container">
+              <TigerMascot
+                mood={tigerGameMood}
+                size="md"
+                position="game"
+                variantSeed={room.roundNumber}
+                showSpeech={hasAnswered || isChaosRound || q.type === 'EDGE' || q.type === 'FUNNY'}
+              />
+            </div>
 
             {/* Round & Category header */}
             <div className="question-header">
