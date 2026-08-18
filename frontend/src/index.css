@@ -473,6 +473,13 @@ body {
   gap: 8px;
 }
 
+.header-left-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .score-pill {
   font-size: 0.85rem;
   font-weight: 800;
@@ -579,7 +586,7 @@ body {
   justify-content: center;
   font-family: var(--font);
   overflow: hidden;
-  padding: 88px 28px 52px;
+  padding: 156px 28px 66px;
   position: relative;
   text-align: center;
   touch-action: manipulation;
@@ -679,17 +686,32 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  max-width: min(760px, 86vw);
+  max-width: min(980px, 88vw);
 }
 
 .split-answer-panel__label {
-  font-size: 3rem;
+  font-size: clamp(2.2rem, 8vw, 4rem);
   font-weight: 900;
   letter-spacing: 0;
-  line-height: 0.96;
+  line-height: 1.04;
   overflow-wrap: anywhere;
   text-wrap: balance;
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.split-answer-panel__label--md {
+  font-size: clamp(2rem, 6.6vw, 3.45rem);
+  line-height: 1.05;
+}
+
+.split-answer-panel__label--lg {
+  font-size: clamp(1.75rem, 5.4vw, 2.85rem);
+  line-height: 1.08;
+}
+
+.split-answer-panel__label--xl {
+  font-size: clamp(1.45rem, 4.5vw, 2.35rem);
+  line-height: 1.12;
 }
 
 @keyframes split-answer-press {
@@ -715,7 +737,7 @@ body {
 
 .split-answer-meta {
   position: fixed;
-  top: calc(34px + env(safe-area-inset-top));
+  top: calc(72px + env(safe-area-inset-top));
   left: 50%;
   z-index: 12;
   width: min(92vw, 680px);
@@ -930,12 +952,7 @@ body {
 
 @media (min-width: 720px) {
   .split-answer-panel {
-    padding-left: 72px;
-    padding-right: 72px;
-  }
-
-  .split-answer-panel__label {
-    font-size: 4.8rem;
+    padding: 170px 72px 78px;
   }
 
   .split-answer-context--hero {
@@ -963,7 +980,7 @@ body {
   }
 
   .split-answer-panel__label {
-    font-size: 2.45rem;
+    font-size: clamp(1.65rem, 10vw, 2.55rem);
   }
 
   .split-answer-prompt {
@@ -978,7 +995,7 @@ body {
 @media (max-width: 480px) {
   .game-header {
     top: env(safe-area-inset-top);
-    grid-template-columns: minmax(0, 1fr) 46px;
+    grid-template-columns: 46px 46px;
     padding: 8px 10px;
     gap: 8px;
     align-items: center;
@@ -986,52 +1003,31 @@ body {
     background: rgba(26, 0, 48, 0.14);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
+    justify-content: space-between;
   }
 
   .header-left-group {
     grid-column: 1;
-    display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
-    min-width: 0;
-    padding: 4px 8px 4px 4px;
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    padding: 0;
     border: 1px solid rgba(255, 255, 255, 0.32);
-    border-radius: var(--radius-full);
+    border-radius: 50%;
     background: rgba(255, 253, 231, 0.92);
     box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
   }
 
   .header-brand-icon {
-    grid-column: 1;
     width: 44px;
     height: 44px;
     padding: 4px;
     background: transparent;
     border: 0;
     box-shadow: none;
-  }
-
-  .header-matchup {
-    grid-column: 2;
-    justify-self: stretch;
-    min-width: 0;
-    max-width: 100%;
-    min-height: auto;
-    padding: 0;
-    gap: 5px;
-    font-size: 0.78rem;
-    letter-spacing: 0.2px;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-  }
-
-  .matchup-p1,
-  .matchup-p2 {
-    max-width: none;
-    min-width: 0;
-    flex: 1 1 0;
   }
 
   .header-right-group {
@@ -1055,7 +1051,7 @@ body {
   }
 
   .split-answer-meta {
-    top: calc(76px + env(safe-area-inset-top));
+    top: calc(70px + env(safe-area-inset-top));
     width: min(94vw, 420px);
     gap: 5px;
   }
@@ -1098,12 +1094,26 @@ body {
   }
 
   .split-answer-panel {
-    padding: 156px 24px 58px;
+    padding: 170px 22px 64px;
   }
 
   .split-answer-panel__label {
-    font-size: clamp(2.6rem, 13vw, 3.65rem);
-    line-height: 0.98;
+    font-size: clamp(1.9rem, 10.5vw, 3rem);
+    line-height: 1.06;
+  }
+
+  .split-answer-panel__label--md {
+    font-size: clamp(1.55rem, 8.6vw, 2.45rem);
+  }
+
+  .split-answer-panel__label--lg {
+    font-size: clamp(1.28rem, 7.2vw, 2rem);
+    line-height: 1.1;
+  }
+
+  .split-answer-panel__label--xl {
+    font-size: clamp(1.08rem, 6vw, 1.64rem);
+    line-height: 1.14;
   }
 
   .split-answer-countdown {

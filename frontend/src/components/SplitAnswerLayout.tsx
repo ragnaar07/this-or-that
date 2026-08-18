@@ -52,6 +52,14 @@ function getCategoryIcon(category?: string) {
   return CATEGORY_ICONS[category.trim().toLowerCase()] ?? '✨';
 }
 
+function answerLengthClass(label: string) {
+  const length = label.trim().length;
+  if (length > 72) return 'split-answer-panel__label--xl';
+  if (length > 52) return 'split-answer-panel__label--lg';
+  if (length > 34) return 'split-answer-panel__label--md';
+  return '';
+}
+
 interface AnswerPanelProps {
   label: string;
   variant: AnswerVariant;
@@ -108,7 +116,7 @@ function AnswerPanel({
             {stepPrefix}
           </span>
         )}
-        <span className="split-answer-panel__label">{label}</span>
+        <span className={`split-answer-panel__label ${answerLengthClass(label)}`.trim()}>{label}</span>
       </span>
     </button>
   );

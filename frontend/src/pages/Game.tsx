@@ -358,6 +358,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
         guestName={room.guestPlayerName}
         onLeave={handlePromptLeave}
         showScore={false}
+        showMatchup={false}
       />
 
       {/* Leave Confirmation Modal */}
