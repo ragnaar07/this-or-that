@@ -409,6 +409,9 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
             revealChoices={mismatchRevealChoices}
             myRevealChoice={isMismatchPreReveal ? myRevealChoice : null}
             opponentRevealChoice={isMismatchPreReveal ? opponentRevealChoice : null}
+            isPredictionRound={isPredictionRound}
+            predictionStep={isPredictionRound ? (myPrediction === null ? 1 : 2) : undefined}
+            opponentName={opponentName}
             onSelect={(choice) => handleOptionClick(choice)}
             predictionNotice={isPredictionRound && !hasAnswered && myPrediction !== null ? (
               <div className="prediction-locked-pill">

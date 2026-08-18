@@ -64,7 +64,37 @@ app.use(cors({
 
 app.use(express.json());
 
-// ---- Health Check Endpoints ----
+// ---- Visitor Counter (10,000+ Base, Increments on every visit) ----
+let visitorCount = 10482;
+
+// ---- IP Session Tracker (1 active game per IP at a time) ----
+interface IpSession {
+  ip: string;
+  roomCode: string;
+  playerId: string;
+  lastActive: number;
+}
+const activeIpSessions = new Map<string, IpSession>();
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
+}
+
+function cleanupIpSessions(): void {
+  const now = Date.now();
+  for (const [ip, session] of activeIpSessions.entries()) {
+    const room = getRoom(session.roomCode);
+    if (!room || room.status === 'FINISHED' || room.status === 'INTERRUPTED' || now - session.lastActive > 45_000) {
+      activeIpSessions.delete(ip);
+    }
+  }
+}
+
+// ---- Health & Stats Endpoints ----
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: Date.now() });
@@ -72,6 +102,28 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ok: true, timestamp: Date.now() });
+});
+
+app.get('/api/stats', (_req: Request, res: Response) => {
+  visitorCount += 1;
+  res.json({
+    visitorCount,
+    totalMatchesSynced: Math.floor(visitorCount * 1.6) + 420,
+    activeRooms: getAllRooms().size,
+    timestamp: Date.now(),
+  });
+});
+
+app.post('/api/visitors/increment', (_req: Request, res: Response) => {
+  visitorCount += 1;
+  res.json({
+    success: true,
+    visitorCount,
+  });
+});
+
+app.get('/api/visitors', (_req: Request, res: Response) => {
+  res.json({ visitorCount });
 });
 
 app.get('/api/ai/status', (_req: Request, res: Response) => {
@@ -87,6 +139,20 @@ app.get('/api/ai/status', (_req: Request, res: Response) => {
 // ============================================================
 app.post('/api/rooms', (req: Request, res: Response) => {
   try {
+    const ip = getClientIp(req);
+    cleanupIpSessions();
+
+    // 1-IP Restriction Check
+    const existing = activeIpSessions.get(ip);
+    if (existing) {
+      const activeRoom = getRoom(existing.roomCode);
+      if (activeRoom && (activeRoom.status === 'WAITING' || activeRoom.status === 'PLAYING' || activeRoom.status === 'REVEALING')) {
+        return res.status(429).json({
+          error: `⚠️ Active game already running from this connection (Room ${existing.roomCode}). Please finish or leave that match first.`,
+        });
+      }
+    }
+
     const rawName = (req.body?.playerName as string | undefined)?.trim();
     const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 1';
     const rawGender = req.body?.gender;
@@ -148,7 +214,8 @@ app.post('/api/rooms', (req: Request, res: Response) => {
     };
 
     setRoom(room);
-    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${hostGender}), Mode: ${gameMode}, DeepPsy: ${deepPsychology}, Tone: ${aiTone}`);
+    activeIpSessions.set(ip, { ip, roomCode: code, playerId, lastActive: now });
+    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${hostGender}), IP: ${ip}, Mode: ${gameMode}, DeepPsy: ${deepPsychology}, Tone: ${aiTone}`);
 
     res.json({
       success: true,
@@ -183,6 +250,18 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     }
     if (room.guestPlayerId && room.status !== 'WAITING') {
       return res.status(409).json({ error: 'THAT ROOM IS ALREADY FULL.' });
+    }
+
+    const ip = getClientIp(req);
+    cleanupIpSessions();
+    const existing = activeIpSessions.get(ip);
+    if (existing && existing.roomCode !== code) {
+      const activeRoom = getRoom(existing.roomCode);
+      if (activeRoom && (activeRoom.status === 'PLAYING' || activeRoom.status === 'REVEALING' || activeRoom.status === 'WAITING')) {
+        return res.status(429).json({
+          error: `⚠️ Active game already running in room ${existing.roomCode}. Please complete or leave that match first.`,
+        });
+      }
     }
 
     const rawName = (req.body?.playerName as string | undefined)?.trim();
@@ -817,6 +896,14 @@ async function finishGame(room: Room): Promise<void> {
   };
 
   setRoom(updated);
+
+  // Release IP sessions for finished room
+  for (const [ip, session] of activeIpSessions.entries()) {
+    if (session.roomCode === room.code) {
+      activeIpSessions.delete(ip);
+    }
+  }
+
   console.log(`[FINISH GAME] Room ${room.code} marked FINISHED with report: "${report.headline}"`);
 }
 
@@ -862,6 +949,13 @@ async function interruptGame(
   };
 
   setRoom(updated);
+
+  // Release IP sessions for interrupted room
+  for (const [ip, session] of activeIpSessions.entries()) {
+    if (session.roomCode === room.code) {
+      activeIpSessions.delete(ip);
+    }
+  }
 }
 
 // ============================================================

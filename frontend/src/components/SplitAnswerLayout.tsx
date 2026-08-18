@@ -34,6 +34,9 @@ interface SplitAnswerLayoutProps {
   opponentRevealChoice?: string | null;
   predictionNotice?: ReactNode;
   countdown?: ReactNode;
+  isPredictionRound?: boolean;
+  predictionStep?: 1 | 2;
+  opponentName?: string;
   onSelect: (choice: string, variant: AnswerVariant) => void;
 }
 
@@ -59,6 +62,7 @@ interface AnswerPanelProps {
   revealPickedByMe: boolean;
   revealPickedByOpponent: boolean;
   disabled: boolean;
+  stepPrefix?: string;
   onSelect: (choice: string, variant: AnswerVariant) => void;
 }
 
@@ -72,6 +76,7 @@ function AnswerPanel({
   revealPickedByMe,
   revealPickedByOpponent,
   disabled,
+  stepPrefix,
   onSelect,
 }: AnswerPanelProps) {
   const classes = [
@@ -98,6 +103,11 @@ function AnswerPanel({
       id={`option-${variant}-panel`}
     >
       <span className="split-answer-panel__inner">
+        {stepPrefix && !revealPicked && (
+          <span className="split-answer-step-tag">
+            {stepPrefix}
+          </span>
+        )}
         <span className="split-answer-panel__label">{label}</span>
       </span>
     </button>
@@ -122,6 +132,9 @@ export function SplitAnswerLayout({
   opponentRevealChoice,
   predictionNotice,
   countdown,
+  isPredictionRound,
+  predictionStep,
+  opponentName,
   onSelect,
 }: SplitAnswerLayoutProps) {
   const [pressedVariant, setPressedVariant] = useState<AnswerVariant | null>(null);
@@ -131,6 +144,19 @@ export function SplitAnswerLayout({
   const revealPickedA = revealChoices.includes(optionA);
   const revealPickedB = revealChoices.includes(optionB);
   const categoryIcon = getCategoryIcon(category);
+
+  let stepPrefixA: string | undefined;
+  let stepPrefixB: string | undefined;
+
+  if (isPredictionRound) {
+    if (predictionStep === 1) {
+      stepPrefixA = `🔮 GUESS: ${opponentName || 'Partner'} WILL PICK`;
+      stepPrefixB = `🔮 GUESS: ${opponentName || 'Partner'} WILL PICK`;
+    } else if (predictionStep === 2) {
+      stepPrefixA = `🎯 YOUR OWN REAL ANSWER`;
+      stepPrefixB = `🎯 YOUR OWN REAL ANSWER`;
+    }
+  }
 
   useEffect(() => {
     if (pressedVariant === null) return;
@@ -192,6 +218,7 @@ export function SplitAnswerLayout({
           revealPickedByMe={myRevealChoice === optionA}
           revealPickedByOpponent={opponentRevealChoice === optionA}
           disabled={disabled}
+          stepPrefix={stepPrefixA}
           onSelect={handleSelect}
         />
         <div className="split-answer-divider" aria-hidden="true" />
@@ -205,6 +232,7 @@ export function SplitAnswerLayout({
           revealPickedByMe={myRevealChoice === optionB}
           revealPickedByOpponent={opponentRevealChoice === optionB}
           disabled={disabled}
+          stepPrefix={stepPrefixB}
           onSelect={handleSelect}
         />
       </div>

@@ -15,6 +15,15 @@ import {
 import { getInstantQuestion, getRoundTypeForRound, getRoundConfiguration } from './dataset/questionsEngine';
 import { enhanceFinalReportWithGemini, generateGeminiMindReadQuestion } from './geminiService';
 
+function personalizeText(text: string, hostName: string, guestName: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\{host\}/gi, hostName)
+    .replace(/\{guest\}/gi, guestName)
+    .replace(/\{opponent\}/gi, guestName)
+    .replace(/\{player\}/gi, hostName);
+}
+
 export async function generateQuestion(
   recentQuestions: string[] = [],
   recentCategories: string[] = [],
@@ -37,9 +46,13 @@ export async function generateQuestion(
       if (aiMindRead && aiMindRead.optionA && aiMindRead.optionB) {
         return {
           ...baseQuestion,
-          scenario: aiMindRead.scenario || baseQuestion.scenario,
-          optionA: aiMindRead.optionA,
-          optionB: aiMindRead.optionB,
+          scenario: aiMindRead.scenario
+            ? personalizeText(aiMindRead.scenario, hostName, guestName)
+            : baseQuestion.scenario
+            ? personalizeText(baseQuestion.scenario, hostName, guestName)
+            : `Can you predict what your partner will pick?`,
+          optionA: personalizeText(aiMindRead.optionA, hostName, guestName),
+          optionB: personalizeText(aiMindRead.optionB, hostName, guestName),
           category: aiMindRead.category || baseQuestion.category || 'Mind Reading & Telepathy',
           timeLimit: 20, // ample time for splash + 2-step prediction
         };
@@ -49,7 +62,12 @@ export async function generateQuestion(
     }
   }
 
-  return baseQuestion;
+  return {
+    ...baseQuestion,
+    scenario: baseQuestion.scenario ? personalizeText(baseQuestion.scenario, hostName, guestName) : undefined,
+    optionA: personalizeText(baseQuestion.optionA, hostName, guestName),
+    optionB: personalizeText(baseQuestion.optionB, hostName, guestName),
+  };
 }
 
 // ============================================================

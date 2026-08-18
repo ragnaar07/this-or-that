@@ -1,4 +1,5 @@
 import { SynqLogo } from '../components/SynqLogo';
+import { Footer } from '../components/Footer';
 
 interface HowToPlayProps {
   onBack: () => void;
@@ -146,6 +147,9 @@ export function HowToPlay({ onBack }: HowToPlayProps) {
             ⚡ START PLAYING NOW
           </button>
         </div>
+
+        {/* Global Credible Footer */}
+        <Footer onOpenHowToPlay={() => {}} onOpenAbout={onBack} />
       </div>
     </div>
   );

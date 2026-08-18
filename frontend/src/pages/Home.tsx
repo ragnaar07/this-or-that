@@ -1,6 +1,7 @@
 import { useState, useId, useEffect } from 'react';
 import { TigerMascot } from '../components/TigerMascot';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { Footer } from '../components/Footer';
 import { api } from '../services/api';
 import type { PlayerSession, RoomState, Gender } from '../types/game';
 
@@ -49,7 +50,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
     }
   });
 
-  const [deepPsychology, setDeepPsychology] = useState<boolean>(true);
+  const deepPsychology = true;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
 
@@ -258,29 +259,6 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 </div>
               </div>
 
-              {/* Deep Psychology Mode Toggle */}
-              <div className="round-settings-group">
-                <div className="round-settings-label">Round Setting</div>
-                <div
-                  className={`deep-psychology-toggle-card ${deepPsychology ? 'enabled' : ''}`}
-                  onClick={() => setDeepPsychology(!deepPsychology)}
-                  role="button"
-                  tabIndex={0}
-                  id="deep-psychology-toggle"
-                >
-                  <div className="toggle-header">
-                    <span className="toggle-icon">🧠</span>
-                    <span className="toggle-title">Deep Psychology Round</span>
-                    <span className={`toggle-pill ${deepPsychology ? 'on' : 'off'}`}>
-                      {deepPsychology ? 'ON' : 'OFF'}
-                    </span>
-                  </div>
-                  <p className="toggle-desc">
-                    Exposes real moral instincts & unfiltered human nature in the middle of match!
-                  </p>
-                </div>
-              </div>
-
               {/* Create room button */}
               <button
                 className="btn btn--pink"
@@ -288,6 +266,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="create-room-btn"
                 aria-label="Create a new game room"
+                style={{ marginTop: 12 }}
               >
                 {loading === 'create' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
@@ -387,6 +366,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="join-room-btn"
                 aria-label="Join existing game room"
+                style={{ marginTop: 12 }}
               >
                 {loading === 'join' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
@@ -401,32 +381,12 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
           {error && <ErrorMessage message={error} />}
         </div>
 
-        {/* Footer Navigation Links */}
-        <div className="home-footer">
-          <button
-            className="footer-about-link"
-            onClick={onOpenHowToPlay}
-            id="footer-howtoplay-link"
-          >
-            🎮 <strong>How to Play</strong>
-          </button>
-          <span style={{ color: 'var(--color-text-muted)', margin: '0 4px' }}>•</span>
-          <button
-            className="footer-about-link"
-            onClick={onOpenAbout}
-            id="footer-about-link"
-          >
-            💡 <strong>About Us</strong>
-          </button>
-          <span style={{ color: 'var(--color-text-muted)', margin: '0 4px' }}>•</span>
-          <button
-            className="footer-about-link"
-            onClick={handleShareApp}
-            id="footer-share-app-link"
-          >
-            🔗 <strong>Share App</strong>
-          </button>
-        </div>
+        {/* Global Credible Footer with Live 10,000+ Visitor Counter */}
+        <Footer
+          onOpenHowToPlay={onOpenHowToPlay}
+          onOpenAbout={onOpenAbout}
+          onShareApp={handleShareApp}
+        />
       </div>
     </div>
   );

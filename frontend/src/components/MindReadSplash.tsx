@@ -79,20 +79,24 @@ export function MindReadSplash({ opponentName, roundNumber, onComplete }: MindRe
 
         {/* Subtitle / Challenge */}
         <p className="mind-read-challenge">
-          Can you predict what <strong>{opponentName}</strong> will pick?!
+          Can you read <strong>{opponentName}</strong>'s mind?
         </p>
 
         {/* 2-Step Guide */}
         <div className="mind-read-steps">
           <div className="mind-read-step-item">
-            <span className="step-num">1</span>
-            <span className="step-text">Guess their answer 🤔</span>
+            <span className="step-num">STEP 1</span>
+            <span className="step-text">Tap what {opponentName} will pick 🤔</span>
           </div>
           <div className="mind-read-arrow">➔</div>
           <div className="mind-read-step-item">
-            <span className="step-num">2</span>
-            <span className="step-text">Pick your answer 🎯</span>
+            <span className="step-num">STEP 2</span>
+            <span className="step-text">Tap your own real choice 🎯</span>
           </div>
+        </div>
+
+        <div className="mind-read-pro-tip">
+          ✨ <em>Guess correctly to earn the <strong>Mind Reader</strong> bonus badge!</em>
         </div>
 
         {/* Dynamic Countdown Ring */}

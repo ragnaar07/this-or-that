@@ -95,5 +95,15 @@ export const api = {
       body: JSON.stringify({ playerId }),
     });
   },
+
+  async getStats() {
+    return request<{ visitorCount: number; totalMatchesSynced: number; activeRooms: number }>('/api/stats');
+  },
+
+  async incrementVisitorCount() {
+    return request<{ success: boolean; visitorCount: number }>('/api/visitors/increment', {
+      method: 'POST',
+    });
+  },
 };
 
