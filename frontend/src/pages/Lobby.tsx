@@ -29,7 +29,7 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
 
   return (
     <div className="app-wrapper">
-      <div className="screen">
+      <div className="screen lobby-screen">
         {/* Mascot in Lobby */}
         <div className="lobby-mascot-container">
           <TigerMascot
@@ -53,9 +53,9 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
         </div>
 
         {/* Share Buttons */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 360, margin: '8px 0' }}>
+        <div className="lobby-actions">
           <button
-            className="btn btn--pink"
+            className="btn btn--pink lobby-action-btn"
             onClick={() => {
               const url = `${window.location.origin}?code=${session.roomCode}`;
               navigator.clipboard.writeText(url);
@@ -66,7 +66,7 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
             📋 COPY INVITE LINK
           </button>
           <a
-            className="btn btn--whatsapp"
+            className="btn btn--whatsapp lobby-action-btn"
             href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Play THIS ⚡ THAT with me! Room Code: ${session.roomCode} 👉 ${window.location.origin}?code=${session.roomCode}`)}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -78,7 +78,7 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
 
         {/* Cancel */}
         <button
-          className="btn btn--ghost"
+          className="btn btn--ghost lobby-cancel-btn"
           onClick={handleCancel}
           id="cancel-lobby-btn"
           aria-label="Cancel and return home"

@@ -331,11 +331,26 @@ body {
 }
 
 /* ---- Lobby ticket ---- */
+.lobby-screen {
+  max-width: 430px;
+  align-items: center;
+  gap: 18px;
+}
+
+.lobby-mascot-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
 .lobby-ticket {
+  width: 100%;
   background: var(--color-card);
   border-radius: var(--radius-md);
-  padding: var(--gap-lg) var(--gap-md);
-  box-shadow: var(--shadow-card), 0 0 0 2px var(--color-border);
+  padding: 34px 24px 30px;
+  border: 2px solid rgba(26, 0, 48, 0.16);
+  box-shadow: 0 6px 0 rgba(26, 0, 48, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.7) inset;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -345,13 +360,13 @@ body {
 .lobby-ticket::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 20px;
+  right: 20px;
   height: 2px;
   background-image: repeating-linear-gradient(
     90deg,
-    var(--color-border) 0px,
-    var(--color-border) 8px,
+    rgba(106, 67, 135, 0.24) 0px,
+    rgba(106, 67, 135, 0.24) 8px,
     transparent 8px,
     transparent 16px
   );
@@ -361,22 +376,22 @@ body {
 .lobby-ticket::after { bottom: 0; }
 
 .ticket-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 4px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 5px;
   text-transform: uppercase;
   color: var(--color-text-muted);
-  margin-bottom: var(--gap-sm);
+  margin-bottom: 18px;
 }
 
 .ticket-code {
   font-family: var(--font-mono);
-  font-size: clamp(3rem, 15vw, 5rem);
+  font-size: clamp(3.2rem, 12vw, 4.6rem);
   font-weight: 900;
-  letter-spacing: 12px;
+  letter-spacing: 10px;
   color: var(--color-text);
   line-height: 1;
-  text-shadow: 3px 3px 0 var(--color-border);
+  text-shadow: 3px 3px 0 rgba(106, 67, 135, 0.2);
 }
 
 .ticket-waiting {
@@ -384,10 +399,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: var(--gap-md);
+  margin-top: 24px;
   font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 2px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
@@ -398,6 +413,31 @@ body {
   border-radius: 50%;
   background: var(--color-pink);
   animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.lobby-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.lobby-action-btn {
+  min-height: 64px;
+  border-radius: 18px;
+  font-size: 1rem;
+  letter-spacing: 1.2px;
+}
+
+.lobby-cancel-btn {
+  width: auto;
+  min-width: 120px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 1.8px;
 }
 
 @keyframes pulse-dot {
@@ -888,6 +928,138 @@ body {
 
   .split-answer-round-pill {
     font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-header {
+    top: env(safe-area-inset-top);
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    padding: 8px 10px;
+    gap: 6px;
+    align-items: flex-start;
+    display: grid;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .header-left-group {
+    display: contents;
+    min-width: 0;
+  }
+
+  .header-brand-icon {
+    grid-column: 1;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    padding: 5px;
+  }
+
+  .header-matchup {
+    grid-column: 2;
+    justify-self: start;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 38px;
+    padding: 5px 10px;
+    gap: 4px;
+    font-size: 0.72rem;
+    letter-spacing: 0.2px;
+    box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
+  }
+
+  .matchup-p1,
+  .matchup-p2 {
+    max-width: 58px;
+  }
+
+  .header-right-group {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .leave-btn {
+    width: 48px;
+    min-height: 48px;
+    padding: 8px;
+    gap: 5px;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
+  }
+
+  .leave-btn-text {
+    display: none;
+  }
+
+  .split-answer-meta {
+    top: calc(76px + env(safe-area-inset-top));
+    width: min(94vw, 420px);
+    gap: 5px;
+  }
+
+  .split-answer-meta .game-round-badge {
+    max-width: calc(100vw - 96px);
+    padding: 5px 12px;
+    font-size: 0.68rem;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .split-answer-round-pill {
+    max-width: calc(100vw - 90px);
+    padding: 7px 12px;
+    gap: 5px 8px;
+    font-size: 0.66rem;
+    line-height: 1.05;
+  }
+
+  .split-answer-category > span:last-child {
+    max-width: 128px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .split-answer-prompt {
+    font-size: 0.68rem;
+  }
+
+  .split-answer-score {
+    top: calc(118px + env(safe-area-inset-top));
+    right: 10px;
+    min-height: 30px;
+    padding: 5px 9px;
+    font-size: 0.72rem;
+  }
+
+  .split-answer-panel {
+    padding: 156px 24px 58px;
+  }
+
+  .split-answer-panel__label {
+    font-size: clamp(2.6rem, 13vw, 3.65rem);
+    line-height: 0.98;
+  }
+
+  .split-answer-countdown {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    width: min(92vw, 370px);
+    padding: 9px 10px;
+  }
+
+  .split-answer-countdown .countdown-row {
+    gap: 10px;
+  }
+
+  .split-answer-countdown .countdown-status {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -3364,6 +3536,34 @@ html, body {
     letter-spacing: 2px;
   }
 
+  .lobby-screen {
+    gap: 14px;
+  }
+
+  .lobby-ticket {
+    padding: 28px 16px 24px;
+  }
+
+  .ticket-label {
+    letter-spacing: 4px;
+  }
+
+  .ticket-code {
+    font-size: clamp(2.9rem, 18vw, 4rem);
+    letter-spacing: 7px;
+  }
+
+  .ticket-waiting {
+    font-size: 0.72rem;
+    letter-spacing: 1.6px;
+  }
+
+  .lobby-action-btn {
+    min-height: 58px;
+    font-size: 0.9rem;
+    padding: 15px 16px;
+  }
+
   .result-hero-card {
     padding: 18px 14px;
   }
@@ -3383,20 +3583,20 @@ html, body {
   }
 
   .header-matchup {
-    max-width: 145px;
-    font-size: 0.78rem;
-    padding: 5px 8px;
+    max-width: calc(100vw - 166px);
+    font-size: 0.72rem;
+    padding: 5px 10px;
   }
 
   .matchup-p1, .matchup-p2 {
-    max-width: 55px;
+    max-width: 58px;
   }
 
   .leave-btn {
-    padding: 6px 12px;
+    padding: 8px 13px;
     font-size: 0.72rem;
     letter-spacing: 1px;
-    min-height: 44px;
+    min-height: 48px;
   }
 
   .score-pill--mini {
@@ -3426,20 +3626,24 @@ html, body {
   }
 
   .header-matchup {
-    max-width: 110px;
+    max-width: calc(100vw - 132px);
     font-size: 0.7rem;
-    padding: 4px 6px;
+    padding: 5px 8px;
     gap: 2px;
   }
 
   .matchup-p1, .matchup-p2 {
-    max-width: 42px;
+    max-width: 46px;
   }
 
   .leave-btn {
-    padding: 6px 8px;
+    padding: 8px;
     font-size: 0.7rem;
     gap: 3px;
+  }
+
+  .leave-btn-text {
+    display: none;
   }
 
   .leave-btn-icon {
