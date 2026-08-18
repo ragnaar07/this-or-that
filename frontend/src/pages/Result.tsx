@@ -1,13 +1,119 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import type { PlayerSession, RoomState } from '../types/game';
-import { Brand } from '../components/Brand';
 import { TigerMascot } from '../components/TigerMascot';
-import { downloadResultCard, shareResultCard } from '../utils/generateResultCard';
+import { shareResultCard } from '../utils/generateResultCard';
 
 interface ResultProps {
   session: PlayerSession;
   room: RoomState;
   onPlayAgain: (selectedMode?: string) => void;
+}
+
+interface AnimatedCompatibilityScoreProps {
+  value: number;
+}
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function AnimatedCompatibilityScore({ value }: AnimatedCompatibilityScoreProps) {
+  const scoreRef = useRef<HTMLDivElement | null>(null);
+  const hasPlayedRef = useRef(false);
+  const frameRef = useRef<number | null>(null);
+  const [displayValue, setDisplayValue] = useState(0);
+  const [payoff, setPayoff] = useState<'confetti' | 'shake' | null>(null);
+
+  useEffect(() => {
+    const node = scoreRef.current;
+    if (!node) return;
+
+    function startAnimation() {
+      if (hasPlayedRef.current) return;
+      hasPlayedRef.current = true;
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        setDisplayValue(value);
+        return;
+      }
+
+      const startedAt = performance.now();
+      const duration = 1200;
+
+      function tick(now: number) {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        setDisplayValue(Math.round(value * easeOutCubic(progress)));
+
+        if (progress < 1) {
+          frameRef.current = window.requestAnimationFrame(tick);
+          return;
+        }
+
+        setDisplayValue(value);
+        if (value >= 70) {
+          setPayoff('confetti');
+          window.setTimeout(() => setPayoff(null), 1400);
+        } else if (value < 20) {
+          setPayoff('shake');
+          window.setTimeout(() => setPayoff(null), 700);
+        }
+      }
+
+      frameRef.current = window.requestAnimationFrame(tick);
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      startAnimation();
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          startAnimation();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.55 }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+      }
+    };
+  }, [value]);
+
+  const confettiPieces = Array.from({ length: 22 }, (_, index) => {
+    const style = {
+      '--x': `${8 + ((index * 19) % 84)}%`,
+      '--dx': `${((index % 7) - 3) * 18}px`,
+      '--delay': `${(index % 6) * 32}ms`,
+      '--rotate': `${(index * 37) % 180}deg`,
+      '--color': ['#ec4899', '#7c3aed', '#00e5a0', '#fff176'][index % 4],
+    } as CSSProperties;
+
+    return <span key={index} className="compatibility-confetti__piece" style={style} />;
+  });
+
+  return (
+    <div
+      ref={scoreRef}
+      className={`result-match-pill result-match-pill--animated${payoff === 'shake' ? ' result-match-pill--low-shake' : ''}`}
+      aria-label={`${value}% compatibility`}
+    >
+      {payoff === 'confetti' && (
+        <span className="compatibility-confetti" aria-hidden="true">
+          {confettiPieces}
+        </span>
+      )}
+      <span className="compatibility-score-number">{displayValue}%</span>
+      <span className="compatibility-score-label">COMPATIBILITY</span>
+    </div>
+  );
 }
 
 export function Result({ session, room, onPlayAgain }: ResultProps) {
@@ -47,20 +153,6 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
     setTimeout(() => setToast(null), 3200);
   }
 
-  async function handleDownload() {
-    if (!report) return;
-    setIsGenerating(true);
-    try {
-      await downloadResultCard(report, hostName, guestName);
-      showToast('Image downloaded! 📸');
-    } catch (err) {
-      console.error(err);
-      showToast('Could not download image.');
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
   async function handleShare() {
     if (!report) return;
     setIsGenerating(true);
@@ -79,22 +171,31 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
     }
   }
 
-  function handleWhatsApp() {
-    const text = `⚡ *THIS ⚡ THAT — MATCH RESULT* ⚡\n\n*${hostName}* × *${guestName}*\n🔥 *${matchPct}% MATCH RATE*!\n"${report?.headline || 'SAME BRAIN, DIFFERENT CHAOS'}"\n\nScore: ${matches}/${completed} Questions Matched\n\nPlay with me: ${window.location.origin}`;
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-  }
-
-  function handleChallenge() {
-    const text = `🎯 *THIS ⚡ THAT CHALLENGE!*\n\n*${hostName}* scored *${matchPct}%* with *${guestName}* on THIS ⚡ THAT!\nThink you know me better?\n\n👉 Test your telepathy with me now: ${window.location.origin}`;
-    navigator.clipboard.writeText(text);
-    showToast('Challenge copied! Paste on WhatsApp / Stories 🎯');
-  }
-
   function handleCopy() {
     const text = `⚡ THIS ⚡ THAT — Match Result ⚡\n${hostName} × ${guestName}\nScore: ${matchPct}% MATCH RATE (${matches}/${completed} matched)\nHeadline: "${report?.headline || 'Same Brain, Different Chaos'}"\nPlay now: ${window.location.origin}`;
     navigator.clipboard.writeText(text);
     showToast('Result copied to clipboard! 📋');
+  }
+
+  async function handleShareApp() {
+    const url = window.location.origin;
+    const payload = {
+      title: 'THIS ⚡ THAT',
+      text: 'Play THIS ⚡ THAT with me.',
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(payload);
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
+    showToast('App link copied! 🔗');
   }
 
   const GAME_MODES = [
@@ -106,11 +207,63 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
     { id: 'DEEP', label: '🧠 DEEP & VALUES', desc: 'Friendship, money & life choices' },
   ];
 
+  const resultActions = (
+    <div className="result-actions result-actions--under-card">
+      <div className="play-again-box">
+        <button
+          className="btn btn--pink"
+          onClick={() => setShowModePicker(!showModePicker)}
+          id="play-again-mode-toggle"
+        >
+          🔄 PLAY AGAIN {showModePicker ? '▲' : '▼'}
+        </button>
+
+        {showModePicker && (
+          <div className="mode-picker-modal">
+            <div className="mode-picker-title">CHOOSE NEXT GAME THEME:</div>
+            <div className="mode-chips-grid">
+              {GAME_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  className={`mode-chip ${selectedPlayMode === m.id ? 'mode-chip--active' : ''}`}
+                  onClick={() => {
+                    setSelectedPlayMode(m.id);
+                    onPlayAgain(m.id);
+                  }}
+                >
+                  <div className="mode-chip-name">{m.label}</div>
+                  <div className="mode-chip-desc">{m.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <button
+        className="btn btn--primary btn--share"
+        onClick={handleShare}
+        disabled={isGenerating || !report}
+        id="share-result-btn"
+      >
+        📸 {isGenerating ? 'Generating...' : 'SHARE RESULT CARD'}
+      </button>
+
+      <button
+        className="btn btn--secondary"
+        onClick={() => onPlayAgain()}
+        id="result-home-btn"
+        style={{ marginTop: 6 }}
+      >
+        🏠 GO HOME
+      </button>
+
+    </div>
+  );
+
   return (
     <div className="app-wrapper">
       <div className="screen result-screen-container">
-        <Brand />
-
         {/* --- SUSPENSEFUL REVEAL INTRO SEQUENCE --- */}
         {revealStep < 5 && (
           <div className="reveal-intro-card">
@@ -208,9 +361,7 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
               <div className="result-matchup-names">
                 {hostName} <span className="result-matchup-cross">⚡</span> {guestName}
               </div>
-              <div className="result-match-pill">
-                {matchPct}% COMPATIBILITY
-              </div>
+              <AnimatedCompatibilityScore value={matchPct} />
               <div className="result-headline">
                 "{report?.headline || 'SAME BRAIN, DIFFERENT CHAOS'}"
               </div>
@@ -221,6 +372,8 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
                 <strong>{completed} ROUNDS PLAYED</strong> • <strong>{matches} MATCHES</strong> • <strong>{matchPct}% COMPATIBILITY</strong>
               </div>
             </div>
+
+            {resultActions}
 
             {/* Achievements Grid */}
             {report?.achievements && report.achievements.length > 0 && (
@@ -406,92 +559,16 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
               </div>
             )}
 
-            {/* Action Buttons & Challenge */}
-            <div className="result-actions">
+            <div className="home-footer result-share-footer">
               <button
-                className="btn btn--primary btn--share"
-                onClick={handleShare}
-                disabled={isGenerating || !report}
-                id="share-result-btn"
+                className="footer-about-link"
+                onClick={handleShareApp}
+                id="result-share-app-link"
               >
-                📸 {isGenerating ? 'Generating...' : 'SHARE RESULT CARD'}
-              </button>
-
-              <button
-                className="btn btn--challenge"
-                onClick={handleChallenge}
-                id="challenge-friend-btn"
-              >
-                🎯 CHALLENGE A FRIEND
-              </button>
-
-              <button
-                className="btn btn--secondary"
-                onClick={handleDownload}
-                disabled={isGenerating || !report}
-                id="download-result-btn"
-              >
-                ⬇ DOWNLOAD RESULT (PNG)
-              </button>
-
-              <button
-                className="btn btn--whatsapp"
-                onClick={handleWhatsApp}
-                id="whatsapp-share-btn"
-              >
-                💬 SHARE ON WHATSAPP
-              </button>
-
-              <button
-                className="btn btn--ghost"
-                onClick={handleCopy}
-                id="copy-result-btn"
-              >
-                🔗 COPY RESULT TEXT
-              </button>
-
-              {/* Play Again with Mode Selector */}
-              <div className="play-again-box">
-                <button
-                  className="btn btn--pink"
-                  onClick={() => setShowModePicker(!showModePicker)}
-                  id="play-again-mode-toggle"
-                >
-                  🔄 PLAY AGAIN {showModePicker ? '▲' : '▼'}
-                </button>
-
-                {showModePicker && (
-                  <div className="mode-picker-modal">
-                    <div className="mode-picker-title">CHOOSE NEXT GAME THEME:</div>
-                    <div className="mode-chips-grid">
-                      {GAME_MODES.map((m) => (
-                        <button
-                          key={m.id}
-                          className={`mode-chip ${selectedPlayMode === m.id ? 'mode-chip--active' : ''}`}
-                          onClick={() => {
-                            setSelectedPlayMode(m.id);
-                            onPlayAgain(m.id);
-                          }}
-                        >
-                          <div className="mode-chip-name">{m.label}</div>
-                          <div className="mode-chip-desc">{m.desc}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Home Button */}
-              <button
-                className="btn btn--secondary"
-                onClick={() => onPlayAgain()}
-                id="result-home-btn"
-                style={{ marginTop: 6 }}
-              >
-                🏠 GO HOME
+                🔗 <strong>Share App</strong>
               </button>
             </div>
+
           </>
         )}
 

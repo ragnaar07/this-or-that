@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { SynqLogo } from './SynqLogo';
+import { GameWordmark } from './GameWordmark';
 
 interface NavBarProps {
   currentScreen?: string;
@@ -49,7 +50,11 @@ export function NavBar({
 
   return (
     <>
-      <header className="navbar-container" role="navigation" aria-label="Main Navigation">
+      <header
+        className={`navbar-container navbar-container--${currentScreen.toLowerCase()}`}
+        role="navigation"
+        aria-label="Main Navigation"
+      >
         <div className="navbar-inner">
           {/* Brand Logo on Left */}
           <div
@@ -61,6 +66,16 @@ export function NavBar({
             id="navbar-brand-logo"
           >
             <SynqLogo size="sm" showText={true} />
+          </div>
+
+          <div
+            className={`navbar-wordmark ${onGoHome && currentScreen !== 'HOME' ? 'navbar-wordmark--clickable' : ''}`}
+            onClick={onGoHome && currentScreen !== 'HOME' ? onGoHome : undefined}
+            role={onGoHome && currentScreen !== 'HOME' ? 'button' : undefined}
+            tabIndex={onGoHome && currentScreen !== 'HOME' ? 0 : undefined}
+            aria-label="THIS THAT home"
+          >
+            <GameWordmark compact />
           </div>
 
           {/* Desktop Navigation Links (> 640px) */}

@@ -1,5 +1,4 @@
 import { useState, useId } from 'react';
-import { Brand } from '../components/Brand';
 import { TigerMascot } from '../components/TigerMascot';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { api } from '../services/api';
@@ -87,11 +86,29 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
     }
   }
 
+  async function handleShareApp() {
+    const url = window.location.origin;
+    const payload = {
+      title: 'THIS ⚡ THAT',
+      text: 'Play THIS ⚡ THAT with me.',
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(payload);
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
+  }
+
   return (
     <div className="app-wrapper">
       <div className="screen">
-        <Brand />
-
         {/* 3D Tiger Mascot — Living Homepage Character */}
         <TigerMascot
           mode="homepage"
@@ -195,6 +212,14 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
             id="footer-about-link"
           >
             💡 <strong>About Us</strong>
+          </button>
+          <span style={{ color: 'var(--color-text-muted)', margin: '0 4px' }}>•</span>
+          <button
+            className="footer-about-link"
+            onClick={handleShareApp}
+            id="footer-share-app-link"
+          >
+            🔗 <strong>Share App</strong>
           </button>
         </div>
       </div>

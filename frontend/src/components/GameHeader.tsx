@@ -6,9 +6,10 @@ interface GameHeaderProps {
   hostName?: string;
   guestName?: string | null;
   onLeave: () => void;
+  showScore?: boolean;
 }
 
-export function GameHeader({ matches, total, hostName, guestName, onLeave }: GameHeaderProps) {
+export function GameHeader({ matches, total, hostName, guestName, onLeave, showScore = true }: GameHeaderProps) {
   return (
     <header className="game-header">
       <div className="header-left-group">
@@ -29,7 +30,7 @@ export function GameHeader({ matches, total, hostName, guestName, onLeave }: Gam
       </div>
 
       <div className="header-right-group">
-        {hostName && guestName && (
+        {showScore && hostName && guestName && (
           <div className="score-pill score-pill--mini" aria-label={`${matches} of ${total} rounds matched`}>
             <span>{matches}</span>/{total}
           </div>

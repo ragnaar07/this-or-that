@@ -4,9 +4,8 @@ import { api } from '../services/api';
 import { usePolling } from '../hooks/usePolling';
 import { GameHeader } from '../components/GameHeader';
 import { Countdown } from '../components/Countdown';
-import { OptionButton } from '../components/OptionButton';
 import { RevealScreen } from '../components/RevealScreen';
-import { TigerMascot } from '../components/TigerMascot';
+import { SplitAnswerLayout } from '../components/SplitAnswerLayout';
 
 interface GameProps {
   session: PlayerSession;
@@ -22,6 +21,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const [lastRoundNumber, setLastRoundNumber] = useState(initialRoom.roundNumber);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showRevealOverlay, setShowRevealOverlay] = useState(initialRoom.status === 'REVEALING');
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
@@ -73,10 +73,31 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       console.log(`[GAME] Round changed from ${lastRoundNumber} to ${room.roundNumber} (${room.currentRoundType})`);
       setMyChoice(null);
       setMyPrediction(null);
+      setShowRevealOverlay(false);
       setLastRoundNumber(room.roundNumber);
       nextRoundRequested.current = false;
     }
   }, [room.roundNumber, room.currentRoundType, lastRoundNumber]);
+
+  useEffect(() => {
+    if (room.status !== 'REVEALING' || !room.lastResult) {
+      setShowRevealOverlay(false);
+      return;
+    }
+
+    if (room.lastResult === 'MATCH') {
+      setShowRevealOverlay(true);
+      return;
+    }
+
+    setShowRevealOverlay(false);
+    const delay = 420;
+    const timer = window.setTimeout(() => {
+      setShowRevealOverlay(true);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [room.status, room.lastResult, room.roundNumber]);
 
   // Polling — 700ms sequential polling for near-realtime feel with monotonic version checking
   const pollRoom = useCallback(async () => {
@@ -208,6 +229,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const q = room.currentQuestion;
   const hasAnswered = myChoice !== null;
   const isRevealing = room.status === 'REVEALING';
+  const isMismatchPreReveal = isRevealing && room.lastResult === 'NO_MATCH' && !showRevealOverlay;
 
   // Dynamic Prompt based on prediction step
   let promptText = 'PICK ONE — FAST!';
@@ -221,18 +243,32 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     }
   }
 
-  // Dynamic Tiger Mascot Mood during gameplay
-  const tigerGameMood = (hasAnswered)
-    ? 'waiting'
-    : isChaosRound || q?.type === 'CHAOS'
-    ? 'chaos'
-    : q?.type === 'FUNNY'
-    ? 'funny'
-    : q?.type === 'EDGE'
-    ? 'edge'
-    : isPredictionRound
-    ? 'curious'
-    : 'focused';
+  const isQuickRound = q
+    ? q.format === 'QUICK' || (!q.scenario && (room.currentTimeLimit === 10 || q.timeLimit === 10))
+    : false;
+
+  const roundBadge = q
+    ? isChaosRound
+      ? { label: '⚠️ CHAOS ROUND (16s)', variant: 'chaos' }
+      : isPredictionRound
+      ? { label: '🧠 MIND READER PREDICTION ROUND (16s)', variant: 'prediction' }
+      : isDoublePointsRound
+      ? { label: '🔥 DOUBLE POINTS ROUND (2X)', variant: 'double' }
+      : q.type === 'EDGE'
+      ? { label: '⚡ RAW HUMAN TRUTH (16s)', variant: 'edge' }
+      : q.type === 'FUNNY'
+      ? { label: '😂 RELATABLE QUIRK (16s)', variant: 'funny' }
+      : q.type === 'CURRENT' || q.isCurrent
+      ? { label: '📰 CURRENT INDIA DEBATE (16s)', variant: 'current' }
+      : isQuickRound
+      ? { label: '⚡ QUICK PICK (10s)', variant: 'quick' }
+      : { label: '🧠 THINK FAST (16s)', variant: 'situational' }
+    : null;
+  const myRevealChoice = session.role === 'host' ? room.lastHostChoice : room.lastGuestChoice;
+  const opponentRevealChoice = session.role === 'host' ? room.lastGuestChoice : room.lastHostChoice;
+  const mismatchRevealChoices = isMismatchPreReveal
+    ? [room.lastHostChoice, room.lastGuestChoice].filter((choice): choice is string => Boolean(choice))
+    : [];
 
   return (
     <>
@@ -243,6 +279,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
         hostName={room.hostPlayerName}
         guestName={room.guestPlayerName}
         onLeave={handlePromptLeave}
+        showScore={false}
       />
 
       {/* Leave Confirmation Modal */}
@@ -274,7 +311,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       )}
 
       {/* Full-screen reveal overlay */}
-      {isRevealing && room.lastResult && (
+      {isRevealing && showRevealOverlay && room.lastResult && (
         <RevealScreen
           result={room.lastResult}
           hostChoice={room.lastHostChoice}
@@ -291,129 +328,39 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       )}
 
       {/* Main game area */}
-      <main className="game-screen">
+      <main className="game-screen game-screen--split">
         {q ? (
-          <>
-            {/* Special Round Banners */}
-            {isChaosRound ? (
-              <div className="game-round-badge game-round-badge--chaos">
-                ⚠️ CHAOS ROUND (16s)
-              </div>
-            ) : isPredictionRound ? (
-              <div className="game-round-badge game-round-badge--prediction">
-                🧠 MIND READER PREDICTION ROUND (16s)
-              </div>
-            ) : isDoublePointsRound ? (
-              <div className="game-round-badge game-round-badge--double">
-                🔥 DOUBLE POINTS ROUND (2X)
-              </div>
-            ) : q.type === 'EDGE' ? (
-              <div className="game-round-badge game-round-badge--edge">
-                ⚡ RAW HUMAN TRUTH (16s)
-              </div>
-            ) : q.type === 'FUNNY' ? (
-              <div className="game-round-badge game-round-badge--funny">
-                😂 RELATABLE QUIRK (16s)
-              </div>
-            ) : q.type === 'CURRENT' || q.isCurrent ? (
-              <div className="game-round-badge game-round-badge--current">
-                📰 CURRENT INDIA DEBATE (16s)
-              </div>
-            ) : q.format === 'QUICK' || (!q.scenario && (room.currentTimeLimit === 10 || q.timeLimit === 10)) ? (
-              <div className="game-round-badge game-round-badge--quick">
-                ⚡ QUICK PICK (10s)
-              </div>
-            ) : (
-              <div className="game-round-badge game-round-badge--situational">
-                🧠 THINK FAST (16s)
-              </div>
-            )}
-
-            {/* In-Game Mascot */}
-            <div className="game-mascot-container">
-              <TigerMascot
-                mood={tigerGameMood}
-                size="md"
-                position="game"
-                variantSeed={room.roundNumber}
-                showSpeech={hasAnswered || isChaosRound || q.type === 'EDGE' || q.type === 'FUNNY'}
-              />
-            </div>
-
-            {/* Round & Category header */}
-            <div className="question-header">
-              <div className="round-progress-pill">
-                ROUND {room.roundNumber} OF {room.totalRounds}
-              </div>
-              {q.category && (
-                <div className="question-category">{q.category}</div>
-              )}
-
-              {/* Situational Scenario / Premise */}
-              {q.scenario ? (
-                <div className="question-scenario-card">
-                  <div className={`question-scenario-text ${
-                    q.scenario.length < 75
-                      ? 'question-scenario-text--hero'
-                      : q.scenario.length < 130
-                      ? 'question-scenario-text--lg'
-                      : 'question-scenario-text--md'
-                  }`}>
-                    {q.scenario}
-                  </div>
-                  <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
-                    {hasAnswered ? 'LOCKED 🔒' : promptText}
-                  </div>
-                </div>
-              ) : (
-                <div className={`question-prompt ${isPredictionRound ? 'question-prompt--prediction' : ''}`}>
-                  {hasAnswered ? 'LOCKED 🔒' : promptText}
-                </div>
-              )}
-            </div>
-
-            {/* Option buttons */}
-            <div className={`options-container ${q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? 'options-container--quick' : ''}`}>
-              <OptionButton
-                label={q.optionA}
-                variant="a"
-                onClick={() => handleOptionClick(q.optionA)}
-                disabled={hasAnswered || isRevealing}
-                selected={myChoice === q.optionA}
-                dimmed={hasAnswered && myChoice !== q.optionA}
-              />
-
-              <div className="options-or" aria-hidden="true">
-                {q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? '⚡' : 'OR'}
-              </div>
-
-              <OptionButton
-                label={q.optionB}
-                variant="b"
-                onClick={() => handleOptionClick(q.optionB)}
-                disabled={hasAnswered || isRevealing}
-                selected={myChoice === q.optionB}
-                dimmed={hasAnswered && myChoice !== q.optionB}
-              />
-            </div>
-
-            {/* Prediction Step Indicator Pill */}
-            {isPredictionRound && !hasAnswered && myPrediction !== null && (
+          <SplitAnswerLayout
+            optionA={q.optionA}
+            optionB={q.optionB}
+            roundLabel={`ROUND ${room.roundNumber} OF ${room.totalRounds}`}
+            category={q.category}
+            prompt={hasAnswered ? 'LOCKED 🔒' : promptText}
+            scoreLabel={`${room.matches}/${room.total}`}
+            roundBadgeLabel={roundBadge?.label}
+            roundBadgeVariant={roundBadge?.variant}
+            scenario={q.scenario}
+            selectedChoice={myChoice}
+            disabled={hasAnswered || isRevealing}
+            dimUnselected={hasAnswered}
+            revealChoices={mismatchRevealChoices}
+            myRevealChoice={isMismatchPreReveal ? myRevealChoice : null}
+            opponentRevealChoice={isMismatchPreReveal ? opponentRevealChoice : null}
+            onSelect={(choice) => handleOptionClick(choice)}
+            predictionNotice={isPredictionRound && !hasAnswered && myPrediction !== null ? (
               <div className="prediction-locked-pill">
                 ✓ Predicted for {opponentName}: <strong>{myPrediction}</strong>
               </div>
-            )}
-
-            {/* Countdown timer */}
-            {!isRevealing && (
+            ) : undefined}
+            countdown={!isRevealing ? (
               <Countdown
                 deadline={room.roundDeadline}
                 hasAnswered={hasAnswered}
                 timeLimit={room.currentTimeLimit || q.timeLimit || (q.format === 'QUICK' ? 10 : 16)}
-                format={q.format === 'QUICK' || (!q.scenario && room.currentTimeLimit === 10) ? 'QUICK' : 'SITUATIONAL'}
+                format={isQuickRound ? 'QUICK' : 'SITUATIONAL'}
               />
-            )}
-          </>
+            ) : undefined}
+          />
         ) : (
           <div style={{ textAlign: 'center' }}>
             <div className="spinner" />

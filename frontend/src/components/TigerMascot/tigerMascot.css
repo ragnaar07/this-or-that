@@ -19,7 +19,7 @@
 .tiger-mascot--sm  { width: 64px; height: 72px; }
 .tiger-mascot--md  { width: 96px; height: 108px; }
 .tiger-mascot--lg  { width: 130px; height: 146px; }
-.tiger-mascot--hero { width: 155px; height: 174px; }
+.tiger-mascot--hero { width: 112px; height: 126px; }
 
 /* ── SVG Rendering ── */
 .tiger-svg {
@@ -35,23 +35,23 @@
 .home-mascot-area {
   position: relative;
   width: 100%;
-  height: 200px;
-  margin: -10px 0 8px;
+  height: 166px;
+  margin: -2px 0 2px;
   overflow: visible;
   z-index: 5;
 }
 
 @media (max-width: 480px) {
   .home-mascot-area {
-    height: 170px;
-    margin: -6px 0 4px;
+    height: 156px;
+    margin: 0 0 2px;
   }
 }
 
 @media (max-width: 360px) {
   .home-mascot-area {
-    height: 150px;
-    margin: -4px 0 2px;
+    height: 142px;
+    margin: 0 0 2px;
   }
 }
 
@@ -462,7 +462,7 @@
    ============================================================ */
 
 @media (max-width: 480px) {
-  .tiger-mascot--hero { width: 125px; height: 140px; }
+  .tiger-mascot--hero { width: 96px; height: 108px; }
   .tiger-mascot--lg { width: 105px; height: 118px; }
   .tiger-mascot--md { width: 80px; height: 90px; }
   .tiger-speech-bubble {
@@ -474,7 +474,7 @@
 }
 
 @media (max-width: 360px) {
-  .tiger-mascot--hero { width: 105px; height: 118px; }
+  .tiger-mascot--hero { width: 86px; height: 97px; }
   .tiger-mascot--lg { width: 90px; height: 101px; }
   .tiger-speech-bubble {
     max-width: 150px;

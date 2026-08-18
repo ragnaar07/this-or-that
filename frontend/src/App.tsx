@@ -5,10 +5,12 @@ import { Game } from './pages/Game';
 import { Result } from './pages/Result';
 import { About } from './pages/About';
 import { HowToPlay } from './pages/HowToPlay';
+import { SplitAnswerMock } from './pages/SplitAnswerMock';
 import { NavBar } from './components/NavBar';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
 
 export default function App() {
+  const isSplitAnswerMock = new URLSearchParams(window.location.search).get('mock') === 'split-answer';
   const [screen, setScreen] = useState<AppScreen>('HOME');
   const [session, setSession] = useState<PlayerSession | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
@@ -75,6 +77,10 @@ export default function App() {
     console.log('[APP] Game reached terminal state. Routing to RESULT screen:', room.status);
     setRoomState(room);
     setScreen('RESULT');
+  }
+
+  if (isSplitAnswerMock) {
+    return <SplitAnswerMock />;
   }
 
   return (
