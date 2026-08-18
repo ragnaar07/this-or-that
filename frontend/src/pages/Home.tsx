@@ -178,7 +178,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
           showSpeech={true}
         />
 
-        <div className="card">
+        <div className="card home-room-card">
           {/* Top Segmented Mode Switcher */}
           <div className="home-mode-tabs" role="tablist">
             <button
@@ -189,7 +189,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
               aria-selected={activeTab === 'create'}
               id="tab-create-room"
             >
-              ⚡ CREATE ROOM
+              ⚡ Create
             </button>
             <button
               type="button"
@@ -199,7 +199,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
               aria-selected={activeTab === 'join'}
               id="tab-join-room"
             >
-              🎮 JOIN ROOM
+              🎮 Join
             </button>
           </div>
 
@@ -268,12 +268,11 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="create-room-btn"
                 aria-label="Create a new game room"
-                style={{ marginTop: 12 }}
               >
                 {loading === 'create' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
                 ) : (
-                  '⚡ CREATE ROOM'
+                  '⚡ START PRIVATE ROOM'
                 )}
               </button>
             </div>
@@ -368,12 +367,11 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="join-room-btn"
                 aria-label="Join existing game room"
-                style={{ marginTop: 12 }}
               >
                 {loading === 'join' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
                 ) : (
-                  '🎮 JOIN ROOM'
+                  '🎮 ENTER ROOM'
                 )}
               </button>
             </div>
