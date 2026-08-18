@@ -934,58 +934,75 @@ body {
 @media (max-width: 480px) {
   .game-header {
     top: env(safe-area-inset-top);
-    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    grid-template-columns: minmax(0, 1fr) 46px;
     padding: 8px 10px;
-    gap: 6px;
-    align-items: flex-start;
+    gap: 8px;
+    align-items: center;
     display: grid;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background: rgba(26, 0, 48, 0.14);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .header-left-group {
-    display: contents;
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
     min-width: 0;
+    padding: 4px 8px 4px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: var(--radius-full);
+    background: rgba(255, 253, 231, 0.92);
+    box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
   }
 
   .header-brand-icon {
     grid-column: 1;
-    flex: 0 0 48px;
-    width: 48px;
-    height: 48px;
-    padding: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
   }
 
   .header-matchup {
     grid-column: 2;
-    justify-self: start;
+    justify-self: stretch;
     min-width: 0;
     max-width: 100%;
-    min-height: 38px;
-    padding: 5px 10px;
-    gap: 4px;
-    font-size: 0.72rem;
+    min-height: auto;
+    padding: 0;
+    gap: 5px;
+    font-size: 0.78rem;
     letter-spacing: 0.2px;
-    box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
   }
 
   .matchup-p1,
   .matchup-p2 {
-    max-width: 58px;
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 0;
   }
 
   .header-right-group {
-    grid-column: 3;
+    grid-column: 2;
     justify-self: end;
   }
 
   .leave-btn {
-    width: 48px;
-    min-height: 48px;
+    width: 46px;
+    min-height: 46px;
     padding: 8px;
-    gap: 5px;
+    gap: 0;
     font-size: 0.72rem;
     letter-spacing: 1px;
+    border-color: rgba(26, 0, 48, 0.18);
     box-shadow: 0 4px 0 rgba(26, 0, 48, 0.22);
   }
 
@@ -3583,20 +3600,21 @@ html, body {
   }
 
   .header-matchup {
-    max-width: calc(100vw - 166px);
-    font-size: 0.72rem;
-    padding: 5px 10px;
+    max-width: 100%;
+    font-size: 0.78rem;
+    padding: 0;
   }
 
   .matchup-p1, .matchup-p2 {
-    max-width: 58px;
+    max-width: none;
   }
 
   .leave-btn {
-    padding: 8px 13px;
+    width: 46px;
+    padding: 8px;
     font-size: 0.72rem;
     letter-spacing: 1px;
-    min-height: 48px;
+    min-height: 46px;
   }
 
   .score-pill--mini {
@@ -3626,17 +3644,19 @@ html, body {
   }
 
   .header-matchup {
-    max-width: calc(100vw - 132px);
+    max-width: 100%;
     font-size: 0.7rem;
-    padding: 5px 8px;
+    padding: 0;
     gap: 2px;
   }
 
   .matchup-p1, .matchup-p2 {
-    max-width: 46px;
+    max-width: none;
   }
 
   .leave-btn {
+    width: 44px;
+    min-height: 44px;
     padding: 8px;
     font-size: 0.7rem;
     gap: 3px;
