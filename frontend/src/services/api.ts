@@ -1,5 +1,5 @@
 // ============================================================
-// API Service — All server communication (V4)
+// API Service — All server communication (V5 Anti-Abuse + Presence)
 // ============================================================
 
 import type { RoomState, PlayerRole } from '../types/game';
@@ -7,13 +7,28 @@ import { API_BASE_URL } from '../config/api';
 
 const BASE_URL = API_BASE_URL;
 
+export function getClientSessionId(): string {
+  try {
+    let sid = sessionStorage.getItem('synq_session_id');
+    if (!sid) {
+      sid = 'sid_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem('synq_session_id', sid);
+    }
+    return sid;
+  } catch {
+    return 'sid_fallback_' + Date.now();
+  }
+}
+
 interface ApiResponse<T = unknown> {
   success?: boolean;
   error?: string;
   room?: RoomState;
   playerId?: string;
+  sessionId?: string;
   role?: PlayerRole;
   data?: T;
+  completedResult?: unknown;
 }
 
 async function request<T>(
@@ -27,7 +42,7 @@ async function request<T>(
     });
     const data = await res.json();
     if (!res.ok) {
-      return { error: data.error ?? 'Something went wrong. Try again.' };
+      return { error: data.error ?? 'Something went wrong. Try again.', room: data.room };
     }
     return data;
   } catch {
@@ -36,6 +51,8 @@ async function request<T>(
 }
 
 export const api = {
+  getClientSessionId,
+
   async createRoom(
     playerName: string,
     gender: 'male' | 'female' | 'other' = 'other',
@@ -44,21 +61,60 @@ export const api = {
     gameMode = 'INDIA',
     aiTone = 'fun'
   ) {
+    const sessionId = getClientSessionId();
     return request('/api/rooms', {
       method: 'POST',
-      body: JSON.stringify({ playerName, gender, deepPsychology, totalRounds, gameMode, aiTone }),
+      body: JSON.stringify({ playerName, gender, deepPsychology, totalRounds, gameMode, aiTone, sessionId }),
     });
   },
 
   async joinRoom(code: string, playerName: string, gender: 'male' | 'female' | 'other' = 'other') {
+    const sessionId = getClientSessionId();
     return request(`/api/rooms/${code}/join`, {
       method: 'POST',
-      body: JSON.stringify({ playerName, gender }),
+      body: JSON.stringify({ playerName, gender, sessionId }),
     });
   },
 
-  async pollRoom(code: string, playerId: string) {
-    return request(`/api/rooms/${code}?playerId=${encodeURIComponent(playerId)}`);
+  async pollRoom(code: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
+    return request(`/api/rooms/${code}?playerId=${encodeURIComponent(playerId)}&sessionId=${encodeURIComponent(sid)}`);
+  },
+
+  async heartbeat(roomCode: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
+    return request('/api/game/heartbeat', {
+      method: 'POST',
+      body: JSON.stringify({ roomCode, playerId, sessionId: sid }),
+    });
+  },
+
+  async reconnect(roomCode: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
+    return request('/api/game/reconnect', {
+      method: 'POST',
+      body: JSON.stringify({ roomCode, playerId, sessionId: sid }),
+    });
+  },
+
+  sendDisconnectBeacon(roomCode: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
+    const payload = JSON.stringify({ roomCode, playerId, sessionId: sid });
+    const url = `${BASE_URL}/api/game/disconnect`;
+
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon(url, blob);
+    } else {
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    }
   },
 
   async submitAnswer(
@@ -106,4 +162,5 @@ export const api = {
     });
   },
 };
+
 

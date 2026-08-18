@@ -25,7 +25,9 @@ export interface Question {
   tags?: string[];
 }
 
-export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'FINISHED' | 'INTERRUPTED';
+export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'PLAYER_DISCONNECTED' | 'FINISHED' | 'COMPLETED' | 'INTERRUPTED' | 'ABANDONED';
+export type ResultType = 'NORMAL' | 'WIN_BY_DEFAULT' | 'DRAW' | 'ABANDONED';
+export type CompletionReason = 'NORMAL_COMPLETION' | 'PLAYER_LEFT' | 'PLAYER_DISCONNECTED' | 'BOTH_DISCONNECTED' | 'TIMEOUT';
 export type GameResult = 'MATCH' | 'NO_MATCH';
 export type PlayerRole = 'host' | 'guest';
 
@@ -109,6 +111,12 @@ export interface FinalReport {
   interruptedReason?: string;
   leftBy?: 'host' | 'guest' | 'both';
   leftAt?: number;
+  winnerPlayerId?: string | null;
+  loserPlayerId?: string | null;
+  winnerName?: string | null;
+  loserName?: string | null;
+  resultType?: ResultType;
+  completionReason?: CompletionReason;
   gameMode?: string;
   aiTone?: 'nice' | 'fun' | 'brutal';
   generatedAt: number;
@@ -147,6 +155,16 @@ export interface RoomState {
   interruptedReason?: string;
   leftBy?: 'host' | 'guest' | 'both';
   leftAt?: number;
+  disconnectedPlayerName?: string | null;
+  disconnectedRole?: 'host' | 'guest' | null;
+  disconnectGraceRemaining?: number | null;
+  disconnectStartedAt?: number | null;
+  winnerPlayerId?: string | null;
+  loserPlayerId?: string | null;
+  winnerName?: string | null;
+  loserName?: string | null;
+  resultType?: ResultType;
+  completionReason?: CompletionReason;
   gameMode?: string;
   aiTone?: 'nice' | 'fun' | 'brutal';
   stateVersion?: number;
@@ -157,6 +175,7 @@ export type AppScreen = 'HOME' | 'LOBBY' | 'GAME' | 'RESULT' | 'ABOUT' | 'HOW_TO
 
 export interface PlayerSession {
   playerId: string;
+  sessionId: string;
   role: PlayerRole;
   roomCode: string;
   playerName: string;

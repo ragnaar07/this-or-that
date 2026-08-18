@@ -1,11 +1,7 @@
-// ============================================================
-// THIS ⚡ THAT — Express API Server (V4 Ultimate Engagement)
-// Dynamic Round Types, Predictions, Chaos, Double Points, Live Reactions
-// ============================================================
-
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -22,14 +18,26 @@ import {
   clearRoundAnswers,
   clearAllRoomAnswers,
   getAllRooms,
+  getGameResult,
+  saveGameResult,
 } from './store';
+import {
+  getIpHash,
+  checkSameRoomIpCollision,
+  checkRateLimit,
+  registerPlayerPresence,
+  handleHeartbeat,
+  handlePlayerReconnect,
+  handleExplicitDisconnect,
+  handleVoluntaryLeave,
+  finalizeGameResult,
+  checkInactivityAndFinalize,
+} from './presenceService';
 import { Room, Answer, RoundHistoryItem, RoundType, QuestionType, QuestionFormat } from './types';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const DEFAULT_TOTAL_ROUNDS = 20;
-const ROUND_DURATION_MS = 10_000;
-const DISCONNECT_TIMEOUT_MS = 30_000;
 
 // ---- Middleware ----
 
@@ -64,35 +72,15 @@ app.use(cors({
 
 app.use(express.json());
 
+// Start periodic presence & disconnect watcher (runs every 2.5 seconds)
+setInterval(() => {
+  checkInactivityAndFinalize().catch((err) => {
+    console.error('[PRESENCE CHECK ERROR]', err);
+  });
+}, 2500);
+
 // ---- Visitor Counter (10,000+ Base, Increments on every visit) ----
 let visitorCount = 10482;
-
-// ---- IP Session Tracker (1 active game per IP at a time) ----
-interface IpSession {
-  ip: string;
-  roomCode: string;
-  playerId: string;
-  lastActive: number;
-}
-const activeIpSessions = new Map<string, IpSession>();
-
-function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
-}
-
-function cleanupIpSessions(): void {
-  const now = Date.now();
-  for (const [ip, session] of activeIpSessions.entries()) {
-    const room = getRoom(session.roomCode);
-    if (!room || room.status === 'FINISHED' || room.status === 'INTERRUPTED' || now - session.lastActive > 45_000) {
-      activeIpSessions.delete(ip);
-    }
-  }
-}
 
 // ---- Health & Stats Endpoints ----
 
@@ -134,23 +122,102 @@ app.get('/api/ai/status', (_req: Request, res: Response) => {
 });
 
 // ============================================================
+// Presence & Heartbeat API Endpoints
+// ============================================================
+
+// POST /api/game/heartbeat — Heartbeat from client every 6-8s
+app.post('/api/game/heartbeat', (req: Request, res: Response) => {
+  try {
+    const { roomCode, playerId, sessionId } = req.body ?? {};
+    if (!roomCode || !playerId) {
+      return res.status(400).json({ error: 'Missing roomCode or playerId.' });
+    }
+
+    const ipHash = getIpHash(req);
+    if (!checkRateLimit(`hb_${ipHash}`, 120, 60_000)) {
+      return res.status(429).json({ error: 'Too many heartbeat requests.' });
+    }
+
+    const result = handleHeartbeat(String(roomCode), String(playerId), String(sessionId || ''));
+    if (!result.success || !result.room) {
+      return res.status(result.error === 'Game already open in another tab.' ? 409 : 404).json({
+        error: result.error || 'Could not update heartbeat.',
+        room: result.room ? sanitizeRoom(result.room) : undefined,
+      });
+    }
+
+    res.json({
+      success: true,
+      room: sanitizeRoom(result.room),
+    });
+  } catch (err) {
+    console.error('[POST /api/game/heartbeat] Error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/game/reconnect — Player reconnects with existing session ID
+app.post('/api/game/reconnect', (req: Request, res: Response) => {
+  try {
+    const { roomCode, playerId, sessionId } = req.body ?? {};
+    if (!roomCode || !playerId) {
+      return res.status(400).json({ error: 'Missing roomCode or playerId.' });
+    }
+
+    const ipHash = getIpHash(req);
+    if (!checkRateLimit(`recon_${ipHash}`, 40, 60_000)) {
+      return res.status(429).json({ error: 'Too many reconnect requests.' });
+    }
+
+    const result = handlePlayerReconnect(String(roomCode), String(playerId), String(sessionId || ''));
+    if (!result.success || !result.room) {
+      // Check if game has a completed result record
+      const savedResult = getGameResult(String(roomCode));
+      if (savedResult) {
+        return res.json({
+          success: true,
+          completedResult: savedResult,
+        });
+      }
+      return res.status(404).json({ error: result.error || 'Room not found.' });
+    }
+
+    res.json({
+      success: true,
+      room: sanitizeRoom(result.room),
+    });
+  } catch (err) {
+    console.error('[POST /api/game/reconnect] Error:', err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// POST /api/game/disconnect — Fast beacon notification on browser/tab close
+app.post('/api/game/disconnect', (req: Request, res: Response) => {
+  try {
+    const { roomCode, playerId, sessionId } = req.body ?? {};
+    if (roomCode && playerId) {
+      handleExplicitDisconnect(String(roomCode), String(playerId), sessionId ? String(sessionId) : undefined);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[POST /api/game/disconnect] Error:', err);
+    res.json({ success: true }); // Always return 200 for beacon
+  }
+});
+
+// ============================================================
 // POST /api/rooms — Create a new room
-// Body: { playerName?: string, totalRounds?: number, gameMode?: string, aiTone?: string }
 // ============================================================
 app.post('/api/rooms', (req: Request, res: Response) => {
   try {
-    const ip = getClientIp(req);
-    cleanupIpSessions();
+    const ipHash = getIpHash(req);
 
-    // 1-IP Restriction Check
-    const existing = activeIpSessions.get(ip);
-    if (existing) {
-      const activeRoom = getRoom(existing.roomCode);
-      if (activeRoom && (activeRoom.status === 'WAITING' || activeRoom.status === 'PLAYING' || activeRoom.status === 'REVEALING')) {
-        return res.status(429).json({
-          error: `⚠️ Active game already running from this connection (Room ${existing.roomCode}). Please finish or leave that match first.`,
-        });
-      }
+    // Rate Limiting Check
+    if (!checkRateLimit(`create_${ipHash}`, 20, 60_000)) {
+      return res.status(429).json({
+        error: 'Too many rooms created. Please wait a minute before creating another.',
+      });
     }
 
     const rawName = (req.body?.playerName as string | undefined)?.trim();
@@ -163,6 +230,7 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       : DEFAULT_TOTAL_ROUNDS;
     const gameMode = String(req.body?.gameMode || 'INDIA').toUpperCase();
     const aiTone = (['nice', 'fun', 'brutal'].includes(req.body?.aiTone) ? req.body.aiTone : 'fun') as 'nice' | 'fun' | 'brutal';
+    const sessionId = String(req.body?.sessionId || crypto.randomUUID());
 
     const playerId = generatePlayerId();
 
@@ -180,10 +248,14 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       hostPlayerName: playerName,
       hostGender,
       hostLastSeenAt: now,
+      hostSessionId: sessionId,
+      hostIpHash: ipHash,
       guestPlayerId: null,
       guestPlayerName: null,
       guestGender: 'other',
       guestLastSeenAt: null,
+      guestSessionId: null,
+      guestIpHash: null,
       deepPsychology,
       status: 'WAITING',
       roundNumber: 0,
@@ -201,6 +273,10 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       lastResult: null,
       lastHostChoice: null,
       lastGuestChoice: null,
+      lastHostPrediction: null,
+      lastGuestPrediction: null,
+      lastHostPredictionResult: null,
+      lastGuestPredictionResult: null,
       lastLiveReaction: null,
       recentQuestions: [],
       recentCategories: [],
@@ -214,13 +290,14 @@ app.post('/api/rooms', (req: Request, res: Response) => {
     };
 
     setRoom(room);
-    activeIpSessions.set(ip, { ip, roomCode: code, playerId, lastActive: now });
-    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${hostGender}), IP: ${ip}, Mode: ${gameMode}, DeepPsy: ${deepPsychology}, Tone: ${aiTone}`);
+    registerPlayerPresence(code, playerId, sessionId, playerName, 'host', ipHash);
+    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${hostGender}), Mode: ${gameMode}, DeepPsy: ${deepPsychology}, Tone: ${aiTone}`);
 
     res.json({
       success: true,
       room: sanitizeRoom(room),
       playerId,
+      sessionId,
       role: 'host',
     });
   } catch (err) {
@@ -231,7 +308,6 @@ app.post('/api/rooms', (req: Request, res: Response) => {
 
 // ============================================================
 // POST /api/rooms/:code/join — Guest joins a room
-// Body: { playerName?: string }
 // ============================================================
 app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
   try {
@@ -241,33 +317,35 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'ENTER A 4-CHARACTER ROOM CODE.' });
     }
 
+    const ipHash = getIpHash(req);
+
+    // Rate Limiting Check
+    if (!checkRateLimit(`join_${ipHash}`, 30, 60_000)) {
+      return res.status(429).json({ error: 'Too many join attempts. Please wait a minute.' });
+    }
+
     const room = getRoom(code);
     if (!room) {
       return res.status(404).json({ error: 'ROOM NOT FOUND.' });
     }
-    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
+    if (room.status === 'FINISHED' || room.status === 'COMPLETED' || room.status === 'INTERRUPTED' || room.status === 'ABANDONED') {
       return res.status(409).json({ error: 'THIS GAME HAS ALREADY ENDED.' });
     }
     if (room.guestPlayerId && room.status !== 'WAITING') {
       return res.status(409).json({ error: 'THAT ROOM IS ALREADY FULL.' });
     }
 
-    const ip = getClientIp(req);
-    cleanupIpSessions();
-    const existing = activeIpSessions.get(ip);
-    if (existing && existing.roomCode !== code) {
-      const activeRoom = getRoom(existing.roomCode);
-      if (activeRoom && (activeRoom.status === 'PLAYING' || activeRoom.status === 'REVEALING' || activeRoom.status === 'WAITING')) {
-        return res.status(429).json({
-          error: `⚠️ Active game already running in room ${existing.roomCode}. Please complete or leave that match first.`,
-        });
-      }
+    // 1 Active Player Per IP in the SAME Room Anti-Abuse Check
+    const ipCheck = checkSameRoomIpCollision(code, ipHash);
+    if (!ipCheck.allowed) {
+      return res.status(409).json({ error: ipCheck.error });
     }
 
     const rawName = (req.body?.playerName as string | undefined)?.trim();
     const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 2';
     const rawGender = req.body?.gender;
     const guestGender = (['male', 'female', 'other'].includes(rawGender) ? rawGender : 'other') as 'male' | 'female' | 'other';
+    const sessionId = String(req.body?.sessionId || crypto.randomUUID());
     const playerId = generatePlayerId();
 
     // Round 1 Setup
@@ -294,6 +372,8 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       guestPlayerName: playerName,
       guestGender,
       guestLastSeenAt: now,
+      guestSessionId: sessionId,
+      guestIpHash: ipHash,
       status: 'PLAYING',
       roundNumber: 1,
       currentQuestion: question,
@@ -309,12 +389,14 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     };
 
     setRoom(updatedRoom);
+    registerPlayerPresence(code, playerId, sessionId, playerName, 'guest', ipHash);
     console.log(`[GUEST JOINED] Room ${code}: "${playerName}" (${guestGender}) joined! Round 1 (${roundType}, ${question.format || 'QUICK'} - ${timeLimit}s): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({
       success: true,
       room: sanitizeRoom(updatedRoom),
       playerId,
+      sessionId,
       role: 'guest',
     });
   } catch (err) {
@@ -324,12 +406,13 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// GET /api/rooms/:code — Poll room state & heartbeat
+// GET /api/rooms/:code — Poll room state & update presence
 // ============================================================
 app.get('/api/rooms/:code', async (req: Request, res: Response) => {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
     const playerId = String(req.query.playerId || '').trim();
+    const sessionId = String(req.query.sessionId || '').trim();
 
     if (!isValidRoomCode(code)) {
       return res.status(400).json({ error: 'Invalid room code.' });
@@ -337,35 +420,25 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 
     const room = getRoom(code);
     if (!room) {
+      // Check if room was completed and stored in gameResults
+      const savedResult = getGameResult(code);
+      if (savedResult) {
+        return res.json({
+          success: true,
+          completedResult: savedResult,
+        });
+      }
       return res.status(404).json({ error: 'ROOM NOT FOUND.' });
+    }
+
+    // 1. Update presence heartbeat if playerId supplied
+    if (playerId) {
+      handleHeartbeat(code, playerId, sessionId);
     }
 
     const now = Date.now();
 
-    // 1. Update presence heartbeat
-    if (playerId === room.hostPlayerId) {
-      room.hostLastSeenAt = now;
-    } else if (playerId === room.guestPlayerId) {
-      room.guestLastSeenAt = now;
-    }
-
-    // 2. Disconnect detection for active games
-    if ((room.status === 'PLAYING' || room.status === 'REVEALING') && room.guestPlayerId) {
-      const hostInactive = now - room.hostLastSeenAt > DISCONNECT_TIMEOUT_MS;
-      const guestInactive = room.guestLastSeenAt ? now - room.guestLastSeenAt > DISCONNECT_TIMEOUT_MS : false;
-
-      if (hostInactive || guestInactive) {
-        const missingPlayer = hostInactive ? room.hostPlayerName : (room.guestPlayerName || 'Opponent');
-        const missingRole: 'host' | 'guest' = hostInactive ? 'host' : 'guest';
-        console.warn(`[DISCONNECT] Room ${code}: ${missingPlayer} (${missingRole}) disconnected.`);
-
-        await interruptGame(room, `${missingPlayer} lost connection.`, missingRole);
-        const updated = getRoom(code)!;
-        return res.json({ success: true, room: sanitizeRoom(updated) });
-      }
-    }
-
-    // 3. Host-Authoritative Timeout Check
+    // 2. Host-Authoritative Timeout Check
     if (
       room.status === 'PLAYING' &&
       room.roundDeadline !== null &&
@@ -384,7 +457,6 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 
 // ============================================================
 // POST /api/rooms/:code/answer — Submit player choice & prediction
-// Body: { playerId, role, roundNumber, choice, prediction }
 // ============================================================
 app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
   try {
@@ -400,7 +472,7 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'ROOM NOT FOUND.' });
     }
 
-    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
+    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED' || room.status === 'COMPLETED') {
       return res.status(409).json({ error: 'Game has already ended.', room: sanitizeRoom(room) });
     }
 
@@ -609,6 +681,16 @@ app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
         interruptedReason: undefined,
         leftBy: undefined,
         leftAt: undefined,
+        disconnectedPlayerName: undefined,
+        disconnectedRole: undefined,
+        disconnectStartedAt: undefined,
+        disconnectGraceRemaining: undefined,
+        winnerPlayerId: undefined,
+        loserPlayerId: undefined,
+        winnerName: undefined,
+        loserName: undefined,
+        resultType: undefined,
+        completionReason: undefined,
         stateVersion: (room.stateVersion || 1) + 1,
         updatedAt: now,
       };
@@ -633,6 +715,16 @@ app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
         interruptedReason: undefined,
         leftBy: undefined,
         leftAt: undefined,
+        disconnectedPlayerName: undefined,
+        disconnectedRole: undefined,
+        disconnectStartedAt: undefined,
+        disconnectGraceRemaining: undefined,
+        winnerPlayerId: undefined,
+        loserPlayerId: undefined,
+        winnerName: undefined,
+        loserName: undefined,
+        resultType: undefined,
+        completionReason: undefined,
         stateVersion: (room.stateVersion || 1) + 1,
         updatedAt: now,
       };
@@ -659,7 +751,7 @@ async function handleLeaveRoom(req: Request, res: Response) {
     }
 
     // 1. Idempotent check: if already finished, return finished room
-    if (room.status === 'FINISHED') {
+    if (room.status === 'FINISHED' || room.status === 'COMPLETED') {
       return res.json({ success: true, room: sanitizeRoom(room) });
     }
 
@@ -698,58 +790,9 @@ async function handleLeaveRoom(req: Request, res: Response) {
       return res.json({ success: true, reason: 'left_before_start' });
     }
 
-    // 4. Active game leave (PLAYING or REVEALING)
-    const leaverRole: 'host' | 'guest' = playerId === room.guestPlayerId ? 'guest' : 'host';
-    const leaverName = leaverRole === 'host' ? room.hostPlayerName : (room.guestPlayerName || 'Opponent');
-
-    console.log(`[PLAYER LEFT] ${leaverName} (${leaverRole}) left room ${code}. Preserving in-progress round and computing authoritative partial result...`);
-
-    // Preserve in-progress round answers if leaving while PLAYING
-    if (room.status === 'PLAYING' && room.currentQuestion) {
-      const alreadyInHistory = room.history.some(h => h.roundNumber === room.roundNumber);
-      if (!alreadyInHistory) {
-        const roundAnswers = getRoundAnswers(code, room.roundNumber);
-        const hostChoice = roundAnswers.host?.choice ?? null;
-        const guestChoice = roundAnswers.guest?.choice ?? null;
-        const hostPred = roundAnswers.host?.prediction ?? null;
-        const guestPred = roundAnswers.guest?.prediction ?? null;
-
-        const isMatch = hostChoice !== null && guestChoice !== null && hostChoice.trim().toLowerCase() === guestChoice.trim().toLowerCase();
-        const pointsAwarded = isMatch ? (room.currentRoundType === 'DOUBLE_POINTS' ? 2 : 1) : 0;
-
-        const historyItem: RoundHistoryItem = {
-          roundNumber: room.roundNumber,
-          question: `${room.currentQuestion.optionA} or ${room.currentQuestion.optionB}`,
-          scenario: room.currentQuestion.scenario,
-          category: room.currentQuestion.category || 'General',
-          format: room.currentQuestion.format || room.currentQuestionFormat,
-          questionType: room.currentQuestion.type || (room.currentRoundType as QuestionType),
-          timeLimit: room.currentTimeLimit || 10,
-          optionA: room.currentQuestion.optionA || '',
-          optionB: room.currentQuestion.optionB || '',
-          roundType: room.currentRoundType,
-          hostChoice,
-          guestChoice,
-          hostPrediction: hostPred,
-          guestPrediction: guestPred,
-          result: isMatch ? 'MATCH' : 'NO_MATCH',
-          pointsAwarded,
-          answeredAt: Date.now(),
-        };
-
-        room.history.push(historyItem);
-        if (isMatch) {
-          room.matches += 1;
-          room.score = (room.score || 0) + pointsAwarded;
-        }
-        room.total = room.history.length;
-      }
-    }
-
-    await interruptGame(room, `${leaverName} left the game.`, leaverRole);
-    const updated = getRoom(code)!;
-
-    res.json({ success: true, room: sanitizeRoom(updated) });
+    // 4. Active game leave (PLAYING, REVEALING, or PLAYER_DISCONNECTED) -> Immediate forfeit award
+    const result = await handleVoluntaryLeave(code, playerId);
+    return res.json({ success: true, room: result.room ? sanitizeRoom(result.room) : undefined });
   } catch (err) {
     console.error('[handleLeaveRoom] Error:', err);
     res.status(500).json({ error: 'Could not leave room.' });
@@ -865,10 +908,11 @@ function resolveRound(code: string): Room | null {
 }
 
 // ============================================================
-// Internal: Finish Game
+// Internal: Finish Game & Generate AI Analysis
 // ============================================================
 async function finishGame(room: Room): Promise<void> {
-  if (room.finalReport) return;
+  const code = room.code;
+  console.log(`[GENERATING FINAL REPORT] Room ${code}...`);
 
   const report = await generateFinalReport(
     room.history,
@@ -891,20 +935,30 @@ async function finishGame(room: Room): Promise<void> {
     ...room,
     status: 'FINISHED',
     finalReport: report,
+    resultType: 'NORMAL',
     stateVersion: (room.stateVersion || 1) + 1,
     updatedAt: Date.now(),
   };
 
   setRoom(updated);
 
-  // Release IP sessions for finished room
-  for (const [ip, session] of activeIpSessions.entries()) {
-    if (session.roomCode === room.code) {
-      activeIpSessions.delete(ip);
-    }
-  }
+  const now = Date.now();
+  saveGameResult({
+    gameId: `${room.code}_${room.createdAt}`,
+    roomCode: room.code,
+    player1Id: room.hostPlayerId,
+    player2Id: room.guestPlayerId || '',
+    winnerId: null,
+    loserId: null,
+    winnerName: null,
+    loserName: null,
+    resultType: 'NORMAL',
+    completionReason: 'NORMAL_COMPLETION',
+    completedAt: now,
+    finalReport: report,
+  });
 
-  console.log(`[FINISH GAME] Room ${room.code} marked FINISHED with report: "${report.headline}"`);
+  console.log(`[GAME FINISHED] Room ${code}: Score ${room.matches}/${room.total} | Sync: ${report.matchPercentage}% | Headline: "${report.headline}"`);
 }
 
 // ============================================================
@@ -949,13 +1003,6 @@ async function interruptGame(
   };
 
   setRoom(updated);
-
-  // Release IP sessions for interrupted room
-  for (const [ip, session] of activeIpSessions.entries()) {
-    if (session.roomCode === room.code) {
-      activeIpSessions.delete(ip);
-    }
-  }
 }
 
 // ============================================================
@@ -1019,6 +1066,16 @@ function sanitizeRoom(room: Room) {
     interruptedReason: room.interruptedReason,
     leftBy: room.leftBy,
     leftAt: room.leftAt,
+    disconnectedPlayerName: room.disconnectedPlayerName,
+    disconnectedRole: room.disconnectedRole,
+    disconnectStartedAt: room.disconnectStartedAt,
+    disconnectGraceRemaining: room.disconnectGraceRemaining,
+    winnerPlayerId: room.winnerPlayerId,
+    loserPlayerId: room.loserPlayerId,
+    winnerName: room.winnerName,
+    loserName: room.loserName,
+    resultType: room.resultType,
+    completionReason: room.completionReason,
     gameMode: room.gameMode,
     aiTone: room.aiTone,
     stateVersion: room.stateVersion || 1,

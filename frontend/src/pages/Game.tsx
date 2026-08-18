@@ -54,21 +54,51 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     };
   }, []);
 
-  // Prevent accidental tab closing during active play
+  // Fast disconnect beacon on tab close / reload
   useEffect(() => {
-    function handleBeforeUnload(e: BeforeUnloadEvent) {
-      if (room.status === 'PLAYING' || room.status === 'REVEALING') {
-        e.preventDefault();
-        e.returnValue = '';
+    function handlePageHide() {
+      if (room.status === 'PLAYING' || room.status === 'REVEALING' || room.status === 'PLAYER_DISCONNECTED') {
+        api.sendDisconnectBeacon(session.roomCode, session.playerId, session.sessionId);
       }
     }
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [room.status]);
+
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handlePageHide);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handlePageHide);
+    };
+  }, [session.roomCode, session.playerId, session.sessionId, room.status]);
+
+  // Periodic Heartbeat every 6 seconds
+  useEffect(() => {
+    if (
+      room.status === 'FINISHED' ||
+      room.status === 'COMPLETED' ||
+      room.status === 'INTERRUPTED' ||
+      room.status === 'ABANDONED'
+    ) {
+      return;
+    }
+
+    const interval = setInterval(async () => {
+      try {
+        await api.heartbeat(session.roomCode, session.playerId, session.sessionId);
+      } catch {}
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [session.roomCode, session.playerId, session.sessionId, room.status]);
 
   // Check for game completion / interruption -> Route directly to Result screen
   useEffect(() => {
-    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED') {
+    if (
+      room.status === 'FINISHED' ||
+      room.status === 'COMPLETED' ||
+      room.status === 'INTERRUPTED' ||
+      room.status === 'ABANDONED'
+    ) {
       console.log(`[GAME] Status is ${room.status}. Transitioning to Result screen...`);
       onGameFinish(room);
     }
@@ -143,7 +173,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const pollRoom = useCallback(async () => {
     if (isLeaving) return;
     try {
-      const res = await api.pollRoom(session.roomCode, session.playerId);
+      const res = await api.pollRoom(session.roomCode, session.playerId, session.sessionId);
       if (res.room) {
         setRoom((prev) => {
           if (!prev) return res.room!;
@@ -159,9 +189,17 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     } catch (err) {
       console.warn('[GAME] Poll error:', err);
     }
-  }, [session.roomCode, session.playerId, isLeaving]);
+  }, [session.roomCode, session.playerId, session.sessionId, isLeaving]);
 
-  usePolling(pollRoom, 700, !isLeaving && room.status !== 'FINISHED' && room.status !== 'INTERRUPTED');
+  usePolling(
+    pollRoom,
+    700,
+    !isLeaving &&
+      room.status !== 'FINISHED' &&
+      room.status !== 'COMPLETED' &&
+      room.status !== 'INTERRUPTED' &&
+      room.status !== 'ABANDONED'
+  );
 
   // Host auto-advances after reveal period (2.5s for prediction reading)
   useEffect(() => {
@@ -388,6 +426,23 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
           hostPredictionResult={room.lastHostPredictionResult}
           guestPredictionResult={room.lastGuestPredictionResult}
         />
+      )}
+
+      {/* Disconnect Grace Period Warning Overlay Banner */}
+      {room.status === 'PLAYER_DISCONNECTED' && (
+        <div className="synq-disconnect-grace-banner" role="alert">
+          <div className="synq-disconnect-grace-content">
+            <span className="synq-disconnect-pulse-dot" />
+            <div className="synq-disconnect-info">
+              <strong>⚠️ {room.disconnectedPlayerName || 'Opponent'} DISCONNECTED</strong>
+              <p>Waiting for player reconnection. Match will auto-resolve if connection is not restored.</p>
+            </div>
+            <div className="synq-disconnect-timer-badge">
+              <span className="synq-disconnect-timer-count">{room.disconnectGraceRemaining ?? 30}</span>
+              <span className="synq-disconnect-timer-unit">SEC</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Main game area */}

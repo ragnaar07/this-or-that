@@ -8,6 +8,7 @@ import { HowToPlay } from './pages/HowToPlay';
 import { SplitAnswerMock } from './pages/SplitAnswerMock';
 import { NavBar } from './components/NavBar';
 import type { AppScreen, PlayerSession, RoomState } from './types/game';
+import { api } from './services/api';
 
 export default function App() {
   const isSplitAnswerMock = new URLSearchParams(window.location.search).get('mock') === 'split-answer';
@@ -15,29 +16,65 @@ export default function App() {
   const [session, setSession] = useState<PlayerSession | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
 
-  // Result persistence: recover result on refresh if room was FINISHED or INTERRUPTED
+  // Active game session & result persistence: recover active match or result on refresh
   useEffect(() => {
-    try {
-      const savedRoom = sessionStorage.getItem('tt_last_result_room');
-      const savedSession = sessionStorage.getItem('tt_last_result_session');
-      if (savedRoom && savedSession) {
-        const parsedRoom: RoomState = JSON.parse(savedRoom);
-        const parsedSession: PlayerSession = JSON.parse(savedSession);
-        if (
-          parsedRoom &&
-          parsedSession &&
-          (parsedRoom.status === 'FINISHED' || parsedRoom.status === 'INTERRUPTED')
-        ) {
-          console.log('[APP] Recovering persisted result after refresh for room:', parsedRoom.code);
-          setRoomState(parsedRoom);
-          setSession(parsedSession);
-          setScreen('RESULT');
+    async function recoverSession() {
+      try {
+        // 1. Check for active gameplay session first
+        const activeRaw = sessionStorage.getItem('synq_active_session');
+        if (activeRaw) {
+          const parsedSession: PlayerSession = JSON.parse(activeRaw);
+          if (parsedSession && parsedSession.roomCode && parsedSession.playerId) {
+            console.log('[APP] Attempting to reconnect active session for room:', parsedSession.roomCode);
+            const res = await api.reconnect(parsedSession.roomCode, parsedSession.playerId, parsedSession.sessionId);
+            if (res.room) {
+              setSession(parsedSession);
+              setRoomState(res.room);
+              if (res.room.status === 'WAITING') {
+                setScreen('LOBBY');
+              } else if (res.room.status === 'PLAYING' || res.room.status === 'REVEALING' || res.room.status === 'PLAYER_DISCONNECTED') {
+                setScreen('GAME');
+              } else if (res.room.status === 'FINISHED' || res.room.status === 'COMPLETED' || res.room.status === 'INTERRUPTED' || res.room.status === 'ABANDONED') {
+                setScreen('RESULT');
+              }
+              return;
+            }
+          }
         }
+
+        // 2. Check for persisted result
+        const savedRoom = sessionStorage.getItem('tt_last_result_room');
+        const savedSession = sessionStorage.getItem('tt_last_result_session');
+        if (savedRoom && savedSession) {
+          const parsedRoom: RoomState = JSON.parse(savedRoom);
+          const parsedSession: PlayerSession = JSON.parse(savedSession);
+          if (
+            parsedRoom &&
+            parsedSession &&
+            (parsedRoom.status === 'FINISHED' || parsedRoom.status === 'COMPLETED' || parsedRoom.status === 'INTERRUPTED' || parsedRoom.status === 'ABANDONED')
+          ) {
+            console.log('[APP] Recovering persisted result after refresh for room:', parsedRoom.code);
+            setRoomState(parsedRoom);
+            setSession(parsedSession);
+            setScreen('RESULT');
+          }
+        }
+      } catch (err) {
+        console.warn('[APP] Could not recover saved session:', err);
       }
-    } catch (err) {
-      console.warn('[APP] Could not recover saved session:', err);
     }
+
+    recoverSession();
   }, []);
+
+  // Save active gameplay session to sessionStorage
+  useEffect(() => {
+    if ((screen === 'GAME' || screen === 'LOBBY') && session) {
+      try {
+        sessionStorage.setItem('synq_active_session', JSON.stringify(session));
+      } catch {}
+    }
+  }, [screen, session]);
 
   // Save active result session to sessionStorage
   useEffect(() => {
@@ -45,6 +82,7 @@ export default function App() {
       try {
         sessionStorage.setItem('tt_last_result_room', JSON.stringify(roomState));
         sessionStorage.setItem('tt_last_result_session', JSON.stringify(session));
+        sessionStorage.removeItem('synq_active_session');
       } catch (err) {
         console.warn('[APP] Could not save result session:', err);
       }
@@ -56,6 +94,7 @@ export default function App() {
     setSession(null);
     setRoomState(null);
     try {
+      sessionStorage.removeItem('synq_active_session');
       sessionStorage.removeItem('tt_last_result_room');
       sessionStorage.removeItem('tt_last_result_session');
     } catch {}

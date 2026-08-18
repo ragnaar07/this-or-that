@@ -1,14 +1,16 @@
-// ============================================================
-// Store — in-memory state for rooms and isolated player answers
-// ============================================================
-
-import { Room, RoundAnswers, Answer } from './types';
+import { Room, RoundAnswers, Answer, GameResultRecord } from './types';
 
 // Primary room map
 const rooms = new Map<string, Room>();
 
 // Answers keyed by "roomCode::roundNumber"
 const answers = new Map<string, RoundAnswers>();
+
+// Completed game results persistence map keyed by "roomCode" or "gameId"
+const gameResults = new Map<string, GameResultRecord>();
+
+// Atomic finalization locks to prevent race conditions on simultaneous disconnects/leaves
+const finalizingLocks = new Set<string>();
 
 // ---- Room CRUD ----
 
@@ -27,12 +29,39 @@ export function getAllRooms(): Map<string, Room> {
 export function deleteRoom(code: string): void {
   const upper = code.toUpperCase();
   rooms.delete(upper);
+  finalizingLocks.delete(upper);
   // Clean related answers
   for (const key of answers.keys()) {
     if (key.startsWith(upper + '::')) {
       answers.delete(key);
     }
   }
+}
+
+// ---- Atomic Finalization Lock ----
+
+export function tryAcquireFinalizeLock(roomCode: string): boolean {
+  const upper = roomCode.toUpperCase();
+  if (finalizingLocks.has(upper)) {
+    return false; // already locked/finalized
+  }
+  finalizingLocks.add(upper);
+  return true;
+}
+
+export function releaseFinalizeLock(roomCode: string): void {
+  finalizingLocks.delete(roomCode.toUpperCase());
+}
+
+// ---- Game Results Persistence ----
+
+export function saveGameResult(record: GameResultRecord): void {
+  gameResults.set(record.roomCode.toUpperCase(), record);
+  gameResults.set(record.gameId, record);
+}
+
+export function getGameResult(roomCodeOrId: string): GameResultRecord | undefined {
+  return gameResults.get(roomCodeOrId.toUpperCase()) || gameResults.get(roomCodeOrId);
 }
 
 // ---- Answer CRUD ----

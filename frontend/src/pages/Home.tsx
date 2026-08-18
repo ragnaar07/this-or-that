@@ -98,6 +98,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
       }
       onEnterLobby({
         playerId: res.playerId,
+        sessionId: res.sessionId || api.getClientSessionId(),
         role: 'host',
         roomCode: res.room.code,
         playerName: name,
@@ -136,6 +137,7 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
       }
       onEnterGame({
         playerId: res.playerId,
+        sessionId: res.sessionId || api.getClientSessionId(),
         role: 'guest',
         roomCode: res.room.code,
         playerName: name,

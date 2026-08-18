@@ -320,12 +320,50 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
         {revealStep === 5 && (
           <>
             {/* Status Badge */}
-            <div className={`result-badge ${isInterrupted ? 'result-badge--interrupted' : 'result-badge--complete'}`}>
-              {isInterrupted ? 'GAME ENDED 👋' : 'GAME COMPLETE ⚡'}
+            <div className={`result-badge ${isInterrupted || room.resultType === 'WIN_BY_DEFAULT' || room.status === 'ABANDONED' ? 'result-badge--interrupted' : 'result-badge--complete'}`}>
+              {room.status === 'ABANDONED' || room.completionReason === 'BOTH_DISCONNECTED'
+                ? 'MATCH ABANDONED / DRAW ⚠️'
+                : room.resultType === 'WIN_BY_DEFAULT' || room.completionReason === 'PLAYER_DISCONNECTED' || room.completionReason === 'PLAYER_LEFT'
+                ? (room.winnerPlayerId === session.playerId ? '🏆 YOU WON BY DEFAULT' : 'MATCH CONCLUDED ⚡')
+                : isInterrupted
+                ? 'GAME ENDED 👋'
+                : 'GAME COMPLETE ⚡'}
             </div>
 
-            {/* Interrupted notice */}
-            {isInterrupted && (
+            {/* Default Win / Loss Banner */}
+            {(room.resultType === 'WIN_BY_DEFAULT' || room.completionReason === 'PLAYER_DISCONNECTED' || room.completionReason === 'PLAYER_LEFT') && (
+              <div className={`interrupted-banner ${room.winnerPlayerId === session.playerId ? 'default-win-banner' : ''}`}>
+                <div className="interrupted-title">
+                  {room.winnerPlayerId === session.playerId
+                    ? `🏆 ${room.loserName || 'Opponent'} ${room.completionReason === 'PLAYER_LEFT' ? 'left the game' : 'disconnected'}. You win by default!`
+                    : room.loserPlayerId === session.playerId
+                    ? `⚠️ You ${room.completionReason === 'PLAYER_LEFT' ? 'left the match' : 'disconnected'}. ${room.winnerName || 'Opponent'} wins by default.`
+                    : `🏆 ${room.winnerName || 'Winner'} wins by default.`}
+                </div>
+                <div className="interrupted-text">
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.95, display: 'inline-block', marginTop: 4 }}>
+                    Based on the {completed} of {totalQuestions} rounds completed before departure.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Abandoned / Double Disconnect Banner */}
+            {(room.status === 'ABANDONED' || room.completionReason === 'BOTH_DISCONNECTED') && (
+              <div className="interrupted-banner">
+                <div className="interrupted-title">⚠️ MATCH ABANDONED (DRAW)</div>
+                <div className="interrupted-text">
+                  Both players lost connection before finishing the game.
+                  <br />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, opacity: 0.9, marginTop: 6, display: 'inline-block' }}>
+                    Based on {completed} answered questions.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Standard Interrupted notice if not already shown above */}
+            {isInterrupted && !room.resultType && room.status !== 'ABANDONED' && (
               <div className="interrupted-banner">
                 <div className="interrupted-title">
                   {room.leftBy === 'both'

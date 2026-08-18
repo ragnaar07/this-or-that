@@ -4916,3 +4916,107 @@ html, body {
   color: #d1b8f5;
   font-weight: 600;
 }
+
+/* ============================================================
+   Disconnection Grace Period Warning Banner & Default Win
+   ============================================================ */
+.synq-disconnect-grace-banner {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 16px auto;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, rgba(255, 60, 100, 0.28), rgba(255, 170, 0, 0.25));
+  border: 2px solid #ff4757;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 24px rgba(255, 71, 87, 0.4), inset 0 0 12px rgba(255, 71, 87, 0.2);
+  backdrop-filter: blur(12px);
+  animation: pulse-border 1.5s infinite alternate;
+  z-index: 50;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 14px rgba(255, 71, 87, 0.35); }
+  100% { box-shadow: 0 0 28px rgba(255, 71, 87, 0.75); }
+}
+
+.synq-disconnect-grace-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.synq-disconnect-pulse-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ff4757;
+  box-shadow: 0 0 12px #ff4757;
+  animation: beacon-blink 1s infinite alternate;
+  flex-shrink: 0;
+}
+
+@keyframes beacon-blink {
+  0% { opacity: 0.3; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+
+.synq-disconnect-info {
+  flex: 1;
+}
+
+.synq-disconnect-info strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.synq-disconnect-info p {
+  margin: 3px 0 0 0;
+  font-size: 0.78rem;
+  color: #ffccd2;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.synq-disconnect-timer-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 71, 87, 0.6);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  min-width: 54px;
+  flex-shrink: 0;
+}
+
+.synq-disconnect-timer-count {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #ff6b81;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.synq-disconnect-timer-unit {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #ffffff;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.default-win-banner {
+  background: linear-gradient(135deg, rgba(0, 229, 160, 0.25), rgba(0, 180, 255, 0.2)) !important;
+  border: 2px solid #00e5a0 !important;
+  box-shadow: 0 0 24px rgba(0, 229, 160, 0.4) !important;
+}
+
+.default-win-banner .interrupted-title {
+  color: #00e5a0 !important;
+}
+

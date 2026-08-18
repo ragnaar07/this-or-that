@@ -24,7 +24,37 @@ export interface Question {
   tags?: string[];
 }
 
-export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'FINISHED' | 'INTERRUPTED';
+export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'PLAYER_DISCONNECTED' | 'FINISHED' | 'COMPLETED' | 'INTERRUPTED' | 'ABANDONED';
+export type ResultType = 'NORMAL' | 'WIN_BY_DEFAULT' | 'DRAW' | 'ABANDONED';
+export type CompletionReason = 'NORMAL_COMPLETION' | 'PLAYER_LEFT' | 'PLAYER_DISCONNECTED' | 'BOTH_DISCONNECTED' | 'TIMEOUT';
+
+export interface PlayerPresence {
+  roomCode: string;
+  playerId: string;
+  sessionId: string;
+  ipHash: string;
+  playerName: string;
+  role: 'host' | 'guest';
+  status: 'CONNECTED' | 'DISCONNECTED';
+  joinedAt: number;
+  lastHeartbeat: number;
+  disconnectStartedAt: number | null;
+}
+
+export interface GameResultRecord {
+  gameId: string;
+  roomCode: string;
+  player1Id: string;
+  player2Id: string;
+  winnerId: string | null;
+  loserId: string | null;
+  winnerName: string | null;
+  loserName: string | null;
+  resultType: ResultType;
+  completionReason: CompletionReason;
+  completedAt: number;
+  finalReport: FinalReport;
+}
 
 export interface RoundHistoryItem {
   roundNumber: number;
@@ -106,6 +136,12 @@ export interface FinalReport {
   interruptedReason?: string;
   leftBy?: 'host' | 'guest' | 'both';
   leftAt?: number;
+  winnerPlayerId?: string | null;
+  loserPlayerId?: string | null;
+  winnerName?: string | null;
+  loserName?: string | null;
+  resultType?: ResultType;
+  completionReason?: CompletionReason;
   gameMode?: string;
   aiTone?: 'nice' | 'fun' | 'brutal';
   generatedAt: number;
@@ -117,10 +153,14 @@ export interface Room {
   hostPlayerName: string;
   hostGender?: 'male' | 'female' | 'other';
   hostLastSeenAt: number;
+  hostSessionId?: string;
+  hostIpHash?: string;
   guestPlayerId: string | null;
   guestPlayerName: string | null;
   guestGender?: 'male' | 'female' | 'other';
   guestLastSeenAt: number | null;
+  guestSessionId?: string | null;
+  guestIpHash?: string | null;
   deepPsychology: boolean;
   status: RoomStatus;
   roundNumber: number;
@@ -150,6 +190,16 @@ export interface Room {
   interruptedReason?: string;
   leftBy?: 'host' | 'guest' | 'both';
   leftAt?: number;
+  disconnectedPlayerName?: string | null;
+  disconnectedRole?: 'host' | 'guest' | null;
+  disconnectStartedAt?: number | null;
+  disconnectGraceRemaining?: number | null;
+  winnerPlayerId?: string | null;
+  loserPlayerId?: string | null;
+  winnerName?: string | null;
+  loserName?: string | null;
+  resultType?: ResultType;
+  completionReason?: CompletionReason;
   gameMode: string;
   aiTone: 'nice' | 'fun' | 'brutal';
   stateVersion: number;

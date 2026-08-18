@@ -13,7 +13,7 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
   // Poll for guest joining — when status changes to PLAYING, enter game
   usePolling(
     async () => {
-      const res = await api.pollRoom(session.roomCode, session.playerId);
+      const res = await api.pollRoom(session.roomCode, session.playerId, session.sessionId);
       if (res.room && res.room.status === 'PLAYING') {
         onGameStart(res.room);
       }
