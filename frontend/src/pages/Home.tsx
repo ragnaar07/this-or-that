@@ -259,23 +259,26 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
               </div>
 
               {/* Deep Psychology Mode Toggle */}
-              <div
-                className={`deep-psychology-toggle-card ${deepPsychology ? 'enabled' : ''}`}
-                onClick={() => setDeepPsychology(!deepPsychology)}
-                role="button"
-                tabIndex={0}
-                id="deep-psychology-toggle"
-              >
-                <div className="toggle-header">
-                  <span className="toggle-icon">🧠</span>
-                  <span className="toggle-title">Deep Psychology Round</span>
-                  <span className={`toggle-pill ${deepPsychology ? 'on' : 'off'}`}>
-                    {deepPsychology ? 'ACTIVE' : 'OFF'}
-                  </span>
+              <div className="round-settings-group">
+                <div className="round-settings-label">Round Setting</div>
+                <div
+                  className={`deep-psychology-toggle-card ${deepPsychology ? 'enabled' : ''}`}
+                  onClick={() => setDeepPsychology(!deepPsychology)}
+                  role="button"
+                  tabIndex={0}
+                  id="deep-psychology-toggle"
+                >
+                  <div className="toggle-header">
+                    <span className="toggle-icon">🧠</span>
+                    <span className="toggle-title">Deep Psychology Round</span>
+                    <span className={`toggle-pill ${deepPsychology ? 'on' : 'off'}`}>
+                      {deepPsychology ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <p className="toggle-desc">
+                    Exposes real moral instincts & unfiltered human nature in the middle of match!
+                  </p>
                 </div>
-                <p className="toggle-desc">
-                  Exposes real moral instincts & unfiltered human nature in the middle of match!
-                </p>
               </div>
 
               {/* Create room button */}
@@ -285,7 +288,6 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="create-room-btn"
                 aria-label="Create a new game room"
-                style={{ marginTop: 8 }}
               >
                 {loading === 'create' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
@@ -385,7 +387,6 @@ export function Home({ onEnterGame, onEnterLobby, onOpenAbout, onOpenHowToPlay }
                 disabled={loading !== null}
                 id="join-room-btn"
                 aria-label="Join existing game room"
-                style={{ marginTop: 8 }}
               >
                 {loading === 'join' ? (
                   <span className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />

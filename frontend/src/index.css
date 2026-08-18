@@ -1808,12 +1808,12 @@ body {
 }
 
 .navbar-inner {
-  max-width: 960px;
+  max-width: 1480px;
   margin: 0 auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 24px;
   width: 100%;
   position: relative;
 }
@@ -1821,6 +1821,7 @@ body {
 .navbar-brand {
   display: inline-flex;
   align-items: center;
+  justify-self: start;
   user-select: none;
   cursor: default;
   position: relative;
@@ -1840,19 +1841,17 @@ body {
 }
 
 .navbar-wordmark {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  justify-self: center;
   cursor: default;
   z-index: 1;
 }
 
 .navbar-container--home .navbar-wordmark {
-  transform: translate(-50%, calc(-50% - 6px));
+  transform: translateY(-6px);
 }
 
 .navbar-wordmark--clickable {
@@ -1866,6 +1865,7 @@ body {
 .navbar-desktop-links {
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 10px;
   position: relative;
   z-index: 2;
@@ -2100,13 +2100,14 @@ body {
   text-transform: uppercase;
 }
 
-/* Switch between desktop links and hamburger drawer at 640px */
-@media (max-width: 640px) {
+/* Switch between desktop links and hamburger drawer before the centered title gets crowded */
+@media (max-width: 1100px) {
   .navbar-desktop-links {
     display: none !important;
   }
   .navbar-mobile-toggle {
     display: flex !important;
+    justify-self: end;
   }
 }
 
@@ -3808,48 +3809,55 @@ html, body {
 .home-mode-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.45);
-  padding: 5px;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 6px;
   border-radius: var(--radius-md);
-  border: 2px solid var(--color-border);
-  margin-bottom: 8px;
+  border: 2px solid rgba(26, 0, 48, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  margin-bottom: 10px;
 }
 
 .home-mode-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 8px;
+  min-height: 52px;
+  padding: 10px 12px;
   font-family: var(--font);
-  font-size: 0.84rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.6px;
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text-muted);
+  color: rgba(45, 17, 71, 0.62);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
 .home-mode-tab:hover {
   color: var(--color-text);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .home-mode-tab.active {
-  background: var(--color-surface);
+  background: #fffaf0;
   color: var(--color-text);
   border-color: var(--color-pink);
-  box-shadow: 0 0 12px rgba(255, 62, 165, 0.35), 2px 2px 0px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 12px rgba(255, 62, 165, 0.24), 3px 3px 0 rgba(26, 0, 48, 0.72);
 }
 
 .home-tab-pane {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   animation: tabFadeIn 0.2s ease-out;
+}
+
+.home-tab-pane > .btn {
+  margin-top: 4px;
 }
 
 @keyframes tabFadeIn {
@@ -3863,39 +3871,40 @@ html, body {
 .gender-selector-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-top: 2px;
 }
 
 .gender-label {
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   color: var(--color-text-muted);
 }
 
 .gender-chips {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .gender-chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 8px 6px;
-  background: var(--color-surface);
+  gap: 6px;
+  min-height: 50px;
+  padding: 10px 8px;
+  background: #fffaf0;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+  box-shadow: 2px 2px 0 rgba(26, 0, 48, 0.48);
 }
 
 .gender-chip:hover {
@@ -3904,81 +3913,115 @@ html, body {
 }
 
 .gender-chip.active {
-  background: linear-gradient(135deg, rgba(255, 62, 165, 0.2), rgba(123, 47, 247, 0.25));
+  background: linear-gradient(135deg, rgba(255, 62, 165, 0.18), rgba(255, 255, 255, 0.95));
   border-color: var(--color-pink);
-  color: #fff;
-  box-shadow: 0 0 12px rgba(255, 62, 165, 0.4), 2px 2px 0px rgba(0, 0, 0, 0.7);
-  transform: scale(1.02);
+  color: var(--color-text);
+  box-shadow: 0 0 12px rgba(255, 62, 165, 0.28), 3px 3px 0 rgba(26, 0, 48, 0.72);
+  transform: translateY(-1px);
 }
 
 /* ============================================================
    DEEP PSYCHOLOGY TOGGLE CARD
    ============================================================ */
+.round-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 14px;
+  border-top: 2px dashed rgba(106, 67, 135, 0.22);
+}
+
+.round-settings-label {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(106, 67, 135, 0.72);
+}
+
 .deep-psychology-toggle-card {
-  background: rgba(26, 16, 48, 0.7);
-  border: 2px solid rgba(179, 77, 255, 0.35);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 2px solid rgba(106, 67, 135, 0.18);
+  border-left: 5px solid rgba(179, 77, 255, 0.78);
+  border-radius: var(--radius-sm);
+  padding: 13px 15px 13px 14px;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
 }
 
 .deep-psychology-toggle-card:hover {
-  border-color: rgba(179, 77, 255, 0.8);
+  border-color: rgba(179, 77, 255, 0.45);
+  border-left-color: #b34dff;
   transform: translateY(-1px);
 }
 
 .deep-psychology-toggle-card.enabled {
-  background: linear-gradient(135deg, rgba(100, 20, 160, 0.35), rgba(40, 10, 80, 0.6));
-  border-color: #b34dff;
-  box-shadow: 0 0 16px rgba(179, 77, 255, 0.3), 3px 3px 0px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(250, 242, 255, 0.9));
+  border-color: rgba(179, 77, 255, 0.38);
+  border-left-color: #b34dff;
+  box-shadow: 0 0 14px rgba(179, 77, 255, 0.12);
 }
 
 .toggle-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .toggle-icon {
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  background: rgba(179, 77, 255, 0.12);
+  font-size: 1.15rem;
 }
 
 .toggle-title {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.5px;
-  color: #f1e4ff;
+  color: var(--color-text);
   flex: 1;
 }
 
 .toggle-pill {
-  font-size: 0.68rem;
+  min-width: 48px;
+  text-align: center;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 1px;
-  padding: 3px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
   text-transform: uppercase;
+  border: 2px solid transparent;
 }
 
 .toggle-pill.on {
-  background: #b34dff;
+  background: rgba(179, 77, 255, 0.12);
   color: #fff;
-  box-shadow: 0 0 10px rgba(179, 77, 255, 0.6);
+  background-color: #b34dff;
+  box-shadow: 0 0 10px rgba(179, 77, 255, 0.35);
 }
 
 .toggle-pill.off {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(106, 67, 135, 0.08);
+  border-color: rgba(106, 67, 135, 0.22);
   color: var(--color-text-muted);
 }
 
 .toggle-desc {
-  font-size: 0.74rem;
-  color: rgba(230, 210, 255, 0.75);
-  margin-top: 5px;
+  padding-left: 44px;
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  margin-top: 6px;
   line-height: 1.35;
 }
 
@@ -4389,6 +4432,3 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
-
-
-
