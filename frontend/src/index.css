@@ -5020,3 +5020,230 @@ html, body {
   color: #00e5a0 !important;
 }
 
+/* ============================================================
+   RESULT SCREEN DASHBOARD LAYOUT
+   ============================================================ */
+.result-screen-container {
+  width: 100%;
+  max-width: 1220px;
+  align-items: center;
+  gap: 18px;
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+
+.result-screen-container > .result-badge,
+.result-screen-container > .interrupted-banner,
+.result-screen-container > .result-dashboard,
+.result-screen-container > .result-highlight-grid,
+.result-screen-container > .result-sections,
+.result-screen-container > .result-share-footer {
+  width: 100%;
+}
+
+.result-screen-container > .result-badge {
+  width: auto;
+  align-self: center;
+}
+
+.result-dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.result-hero-card--wide {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px;
+}
+
+.result-hero-visual,
+.result-hero-summary {
+  min-width: 0;
+}
+
+.result-hero-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.result-hero-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.result-side-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.result-side-panel .result-actions {
+  margin-top: 0;
+}
+
+.result-side-panel .result-actions--under-card {
+  margin-top: 0;
+}
+
+.result-quick-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.result-quick-fact {
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.result-quick-fact span,
+.result-quick-fact strong {
+  display: block;
+}
+
+.result-quick-fact span {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.result-quick-fact strong {
+  margin-top: 3px;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--color-text);
+}
+
+.result-highlight-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.result-highlight-grid:empty {
+  display: none;
+}
+
+.result-sections {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.result-card--verdict {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 720px) {
+  .result-highlight-grid,
+  .result-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .result-card--achievements,
+  .result-card--categories,
+  .result-card--verdict {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .result-screen-container {
+    padding-top: 52px;
+    gap: 20px;
+  }
+
+  .result-dashboard {
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.85fr);
+    gap: 20px;
+  }
+
+  .result-hero-card--wide {
+    grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.15fr);
+    min-height: 360px;
+    padding: 30px 28px;
+    text-align: left;
+  }
+
+  .result-hero-visual {
+    height: 100%;
+    justify-content: center;
+    padding-right: 24px;
+    border-right: 2px dashed rgba(26, 0, 48, 0.14);
+  }
+
+  .result-hero-summary {
+    align-items: flex-start;
+    text-align: left;
+    gap: 14px;
+  }
+
+  .result-hero-summary .result-matchup-names {
+    justify-content: flex-start;
+  }
+
+  .result-hero-summary .result-headline {
+    font-size: clamp(1.45rem, 2vw, 2rem);
+  }
+
+  .result-hero-summary .result-score-sub {
+    border-radius: var(--radius-md);
+  }
+
+  .result-side-panel {
+    position: sticky;
+    top: 96px;
+  }
+
+  .result-side-panel .result-actions .btn {
+    min-height: 54px;
+  }
+
+  .result-quick-facts {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .result-quick-fact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    padding: 12px 14px;
+  }
+
+  .result-quick-fact strong {
+    margin-top: 0;
+    font-size: 1.1rem;
+  }
+
+  .result-highlight-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .result-highlight-grid .result-card {
+    min-width: 0;
+  }
+
+  .result-card--achievements,
+  .result-card--categories {
+    grid-column: span 2;
+  }
+}

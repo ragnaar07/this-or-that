@@ -256,7 +256,6 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
         className="btn btn--secondary"
         onClick={onGoHome}
         id="result-home-btn"
-        style={{ marginTop: 6 }}
       >
         🏠 GO HOME
       </button>
@@ -386,120 +385,144 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
               </div>
             )}
 
-            {/* Hero Score & Match Rate Card with Tiger Mascot */}
-            <div className="result-hero-card">
-              <div className="result-mascot-container">
-                <TigerMascot
-                  mood={isInterrupted ? 'opponentLeft' : matchPct >= 80 ? 'resultHigh' : matchPct >= 50 ? 'resultMedium' : 'resultLow'}
-                  position="result"
-                  size="lg"
-                  showSpeech={true}
-                />
+            <div className="result-dashboard">
+              {/* Hero Score & Match Rate Card with Tiger Mascot */}
+              <div className="result-hero-card result-hero-card--wide">
+                <div className="result-hero-visual">
+                  <div className="result-mascot-container">
+                    <TigerMascot
+                      mood={isInterrupted ? 'opponentLeft' : matchPct >= 80 ? 'resultHigh' : matchPct >= 50 ? 'resultMedium' : 'resultLow'}
+                      position="result"
+                      size="lg"
+                      showSpeech={true}
+                    />
+                  </div>
+                  <AnimatedCompatibilityScore value={matchPct} />
+                </div>
+
+                <div className="result-hero-summary">
+                  <div className="result-matchup-names">
+                    {hostName} <span className="result-matchup-cross">⚡</span> {guestName}
+                  </div>
+                  <div className="result-headline">
+                    "{report?.headline || 'SAME BRAIN, DIFFERENT CHAOS'}"
+                  </div>
+                  <div className="result-vibe-tag">
+                    Vibe: {report?.overallVibe || 'Cosmic Sync'}
+                  </div>
+                  <div className="result-score-sub">
+                    <strong>{completed} ROUNDS PLAYED</strong> • <strong>{matches} MATCHES</strong> • <strong>{matchPct}% COMPATIBILITY</strong>
+                  </div>
+                </div>
               </div>
 
-              <div className="result-matchup-names">
-                {hostName} <span className="result-matchup-cross">⚡</span> {guestName}
-              </div>
-              <AnimatedCompatibilityScore value={matchPct} />
-              <div className="result-headline">
-                "{report?.headline || 'SAME BRAIN, DIFFERENT CHAOS'}"
-              </div>
-              <div className="result-vibe-tag">
-                Vibe: {report?.overallVibe || 'Cosmic Sync'}
-              </div>
-              <div className="result-score-sub">
-                <strong>{completed} ROUNDS PLAYED</strong> • <strong>{matches} MATCHES</strong> • <strong>{matchPct}% COMPATIBILITY</strong>
-              </div>
+              <aside className="result-side-panel" aria-label="Result actions and quick facts">
+                {resultActions}
+                <div className="result-quick-facts">
+                  <div className="result-quick-fact">
+                    <span>Rounds</span>
+                    <strong>{completed}/{totalQuestions}</strong>
+                  </div>
+                  <div className="result-quick-fact">
+                    <span>Matches</span>
+                    <strong>{matches}</strong>
+                  </div>
+                  <div className="result-quick-fact">
+                    <span>Sync</span>
+                    <strong>{matchPct}%</strong>
+                  </div>
+                </div>
+              </aside>
             </div>
 
-            {resultActions}
-
-            {/* Achievements Grid */}
-            {report?.achievements && report.achievements.length > 0 && (
-              <div className="result-card result-card--achievements">
-                <div className="result-card-title">🏆 ACHIEVEMENTS UNLOCKED</div>
-                <div className="achievements-grid">
-                  {report.achievements.map((ach) => (
-                    <div key={ach.id} className="achievement-item">
-                      <div className="achievement-icon">{ach.icon}</div>
-                      <div className="achievement-info">
-                        <div className="achievement-title">{ach.title}</div>
-                        <div className="achievement-desc">{ach.description}</div>
+            <div className="result-highlight-grid">
+              {/* Achievements Grid */}
+              {report?.achievements && report.achievements.length > 0 && (
+                <div className="result-card result-card--achievements">
+                  <div className="result-card-title">🏆 ACHIEVEMENTS UNLOCKED</div>
+                  <div className="achievements-grid">
+                    {report.achievements.map((ach) => (
+                      <div key={ach.id} className="achievement-item">
+                        <div className="achievement-icon">{ach.icon}</div>
+                        <div className="achievement-info">
+                          <div className="achievement-title">{ach.title}</div>
+                          <div className="achievement-desc">{ach.description}</div>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mind Reader Score Card */}
+              {report?.predictionScore && (
+                <div className="result-card result-card--mindreader">
+                  <div className="result-card-title">🧠 MIND READER SCORE</div>
+                  <div className="mindreader-score-pill">
+                    {report.predictionScore.hostName}: <strong>{report.predictionScore.hostCorrect}/{report.predictionScore.totalPredictions}</strong>
+                    <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
+                    {report.predictionScore.guestName}: <strong>{report.predictionScore.guestCorrect}/{report.predictionScore.totalPredictions}</strong>
+                  </div>
+                  <div className="mindreader-summary">
+                    {report.predictionScore.summary}
+                  </div>
+                </div>
+              )}
+
+              {/* Instinct vs Strategy Comparison Card */}
+              {(report?.instinctMatchPercentage !== undefined || report?.strategicMatchPercentage !== undefined) && (
+                <div className="result-card result-card--instinct">
+                  <div className="result-card-title">⚡ FAST INSTINCT VS 🧠 DEEP STRATEGY</div>
+                  <div className="instinct-strategy-grid">
+                    <div className="instinct-stat-box">
+                      <div className="instinct-stat-label">⚡ 10s Quick Picks</div>
+                      <div className="instinct-stat-val">{report?.instinctMatchPercentage ?? matchPct}%</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Mind Reader Score Card */}
-            {report?.predictionScore && (
-              <div className="result-card result-card--mindreader">
-                <div className="result-card-title">🧠 MIND READER SCORE</div>
-                <div className="mindreader-score-pill">
-                  {report.predictionScore.hostName}: <strong>{report.predictionScore.hostCorrect}/{report.predictionScore.totalPredictions}</strong>
-                  <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
-                  {report.predictionScore.guestName}: <strong>{report.predictionScore.guestCorrect}/{report.predictionScore.totalPredictions}</strong>
-                </div>
-                <div className="mindreader-summary">
-                  {report.predictionScore.summary}
-                </div>
-              </div>
-            )}
-
-            {/* Instinct vs Strategy Comparison Card */}
-            {(report?.instinctMatchPercentage !== undefined || report?.strategicMatchPercentage !== undefined) && (
-              <div className="result-card result-card--instinct">
-                <div className="result-card-title">⚡ FAST INSTINCT VS 🧠 DEEP STRATEGY</div>
-                <div className="instinct-strategy-grid">
-                  <div className="instinct-stat-box">
-                    <div className="instinct-stat-label">⚡ 10s Quick Picks</div>
-                    <div className="instinct-stat-val">{report?.instinctMatchPercentage ?? matchPct}%</div>
-                  </div>
-                  <div className="instinct-stat-box instinct-stat-box--strategy">
-                    <div className="instinct-stat-label">🧠 16s Situational</div>
-                    <div className="instinct-stat-val">{report?.strategicMatchPercentage ?? matchPct}%</div>
-                  </div>
-                </div>
-                {report?.instinctVsStrategyInsight && (
-                  <div className="instinct-strategy-insight">
-                    {report.instinctVsStrategyInsight}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Category Breakdown */}
-            {report?.categoryScores && report.categoryScores.length > 0 && (
-              <div className="result-card result-card--categories">
-                <div className="result-card-title">📊 CATEGORY BREAKDOWN</div>
-                <div className="result-card-subtitle">How your sync varied by topic:</div>
-                <div className="category-bars-list">
-                  {report.categoryScores.map((cat, idx) => (
-                    <div key={idx} className="category-bar-item">
-                      <div className="category-bar-label-row">
-                        <span className="category-bar-name">{cat.category}</span>
-                        <span className="category-bar-pct">{cat.matchPercentage}%</span>
-                      </div>
-                      <div className="category-bar-track">
-                        <div
-                          className="category-bar-fill"
-                          style={{
-                            width: `${cat.matchPercentage}%`,
-                            backgroundColor:
-                              cat.matchPercentage >= 75
-                                ? 'var(--color-match)'
-                                : cat.matchPercentage >= 40
-                                ? 'var(--color-pink)'
-                                : 'var(--color-nomatch)',
-                          }}
-                        />
-                      </div>
+                    <div className="instinct-stat-box instinct-stat-box--strategy">
+                      <div className="instinct-stat-label">🧠 16s Situational</div>
+                      <div className="instinct-stat-val">{report?.strategicMatchPercentage ?? matchPct}%</div>
                     </div>
-                  ))}
+                  </div>
+                  {report?.instinctVsStrategyInsight && (
+                    <div className="instinct-strategy-insight">
+                      {report.instinctVsStrategyInsight}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Category Breakdown */}
+              {report?.categoryScores && report.categoryScores.length > 0 && (
+                <div className="result-card result-card--categories">
+                  <div className="result-card-title">📊 CATEGORY BREAKDOWN</div>
+                  <div className="result-card-subtitle">How your sync varied by topic:</div>
+                  <div className="category-bars-list">
+                    {report.categoryScores.map((cat, idx) => (
+                      <div key={idx} className="category-bar-item">
+                        <div className="category-bar-label-row">
+                          <span className="category-bar-name">{cat.category}</span>
+                          <span className="category-bar-pct">{cat.matchPercentage}%</span>
+                        </div>
+                        <div className="category-bar-track">
+                          <div
+                            className="category-bar-fill"
+                            style={{
+                              width: `${cat.matchPercentage}%`,
+                              backgroundColor:
+                                cat.matchPercentage >= 75
+                                  ? 'var(--color-match)'
+                                  : cat.matchPercentage >= 40
+                                  ? 'var(--color-pink)'
+                                  : 'var(--color-nomatch)',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* AI Breakdown Sections */}
             {report && (
