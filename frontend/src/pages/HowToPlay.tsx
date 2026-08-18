@@ -28,95 +28,110 @@ export function HowToPlay({ onBack }: HowToPlayProps) {
             HOW TO PLAY <span style={{ color: 'var(--color-pink)' }}>⚡</span>
           </h1>
           <p className="about-hero-tagline">
-            2 Players • 2 Choices • 10 Seconds • Pure Mind Sync
+            2 Friends • 2 Options • Zero Talking • 100% Mind Sync
           </p>
+          <div className="about-quote-box" style={{ marginTop: 12 }}>
+            <strong>The Objective:</strong> Pick the exact same option as your friend at the same moment. The more choices you match, the higher your sync score!
+          </div>
         </div>
 
         {/* Step-by-Step Cards */}
         <div className="about-cards-list">
-          {/* Step 1: Create or Join Room */}
+          {/* Step 1: Create or Join */}
           <div className="howtoplay-step-card">
             <div className="step-number-badge">STEP 1</div>
             <h2 className="about-card-heading">🏠 Create or Join a Room</h2>
-            <p className="about-card-text">
-              <strong>Player 1 (Host):</strong> Enter your name or nickname and click <strong>⚡ CREATE A ROOM</strong>. You will receive a unique 4-character Room Code (e.g. <code>XY9Z</code>). Share this code with your friend.
-            </p>
-            <p className="about-card-text" style={{ marginTop: 6 }}>
-              <strong>Player 2 (Guest):</strong> Enter your name, type the 4-letter Room Code, and click <strong>JOIN ROOM</strong>. The game starts immediately in sync!
-            </p>
+            <div className="howtoplay-subcard-grid">
+              <div className="howtoplay-subcard">
+                <div className="howtoplay-subcard-title">⚡ Player 1 (Host)</div>
+                <p className="about-card-text">
+                  Enter your name, pick your gender, and click <strong>CREATE ROOM</strong>. Share the 4-letter code or tap <strong>INVITE ON WHATSAPP</strong>!
+                </p>
+              </div>
+              <div className="howtoplay-subcard">
+                <div className="howtoplay-subcard-title">🎮 Player 2 (Guest)</div>
+                <p className="about-card-text">
+                  Tap <strong>JOIN ROOM</strong>, enter the 4-letter code along with your name & gender, and jump straight into the live match!
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Step 2: 10-Second Choice */}
+          {/* Step 2: 10s Instinct Rounds */}
           <div className="howtoplay-step-card">
             <div className="step-number-badge">STEP 2</div>
-            <h2 className="about-card-heading">⏱️ 10-Second Adrenaline Timer</h2>
+            <h2 className="about-card-heading">⏱️ Rapid 10s Instinct Rounds</h2>
             <p className="about-card-text">
-              Both players see the exact same question simultaneously on their phones. You have <strong>10 seconds</strong> to pick <strong>OPTION A</strong> or <strong>OPTION B</strong>.
+              Both players get the exact same dilemma on their screen simultaneously. You have <strong>10 seconds</strong> to pick <strong>OPTION A</strong> or <strong>OPTION B</strong>.
             </p>
             <div className="howtoplay-sample-box">
-              <div className="sample-q">"Tapri Chai vs Cafe Coffee?"</div>
+              <div className="sample-q">"Roadside Tapri Chai vs Aesthetic Cafe Coffee?"</div>
               <div className="sample-options">
-                <span className="sample-opt sample-opt--a">Option A: Roadside Tapri Chai</span>
-                <span className="sample-opt sample-opt--b">Option B: Aesthetic Cafe Coffee</span>
+                <span className="sample-opt sample-opt--a">☕ Option A: Tapri Chai & Bun Maska</span>
+                <span className="sample-opt sample-opt--b">🥐 Option B: Cafe Coffee & Croissant</span>
               </div>
             </div>
             <p className="about-card-text" style={{ marginTop: 8 }}>
-              Your choice stays secret until your friend also picks or time runs out!
+              💡 <em>Your pick is kept top-secret until both of you lock in or time expires!</em>
             </p>
           </div>
 
-          {/* Step 3: Prediction Rounds */}
-          <div className="howtoplay-step-card">
-            <div className="step-number-badge step-number-badge--pred">STEP 3 (SPECIAL)</div>
-            <h2 className="about-card-heading">🧠 Mind Reader Prediction Rounds</h2>
+          {/* Step 3: Deep Psychology Round */}
+          <div className="howtoplay-step-card" style={{ borderColor: 'rgba(179, 77, 255, 0.5)' }}>
+            <div className="step-number-badge" style={{ background: '#b34dff', color: '#fff' }}>
+              STEP 3 (HIGH STAKES)
+            </div>
+            <h2 className="about-card-heading">🧠 Deep Psychology Round (Real Nature Test)</h2>
             <p className="about-card-text">
-              In special prediction rounds (Rounds 10 & 19):
+              When the screen turns purple with the <strong>Deep Psychology Splash</strong>, you enter a high-stakes <strong>18-second moral test</strong>:
             </p>
             <ul className="about-bullets">
-              <li><strong>Step 1:</strong> First, guess what your friend will choose! (<em>"What will Rahul pick?"</em>)</li>
-              <li><strong>Step 2:</strong> Then, pick your own answer!</li>
+              <li><strong>Raw Moral Dilemmas:</strong> Tough choices between friendship vs honesty, money vs ethics, and personal ambition vs loyalty.</li>
+              <li><strong>True Nature Reveal:</strong> Tests whether your moral compass aligns with your friend or if you think completely differently!</li>
             </ul>
-            <p className="about-card-text" style={{ marginTop: 6 }}>
-              At the reveal, see if you scored <strong>🎯 MIND READER</strong> or <strong>❌ YOU THOUGHT YOU KNEW THEM 😂</strong>!
-            </p>
           </div>
 
-          {/* Step 4: Instant Match Reveal */}
-          <div className="howtoplay-step-card">
-            <div className="step-number-badge">STEP 4</div>
-            <h2 className="about-card-heading">⚡ Match / No Match Live Reveal</h2>
+          {/* Step 4: Mind Read Round */}
+          <div className="howtoplay-step-card" style={{ borderColor: 'rgba(255, 62, 165, 0.5)' }}>
+            <div className="step-number-badge step-number-badge--pred">
+              STEP 4 (TELEPATHY)
+            </div>
+            <h2 className="about-card-heading">🔮 Mind Reader Prediction Rounds</h2>
             <p className="about-card-text">
-              Once both players lock in:
+              On special mind-reading rounds, test how well you actually know each other:
             </p>
             <ul className="about-bullets">
-              <li><strong>⚡ MATCH (SAME BRAIN!):</strong> If you both pick the exact same option, your score increases!</li>
-              <li><strong>💀 NO MATCH (OPPOSITE ENERGY):</strong> If choices differ, discover where your tastes clash!</li>
-              <li>Streaks unlock dynamic live commentary and reaction phrases on screen.</li>
+              <li><strong>Part 1 — The Guess:</strong> First, guess what your friend will choose! (<em>"What will Rahul pick?"</em>)</li>
+              <li><strong>Part 2 — Your Own Pick:</strong> Then, pick your own answer!</li>
+              <li><strong>The Reveal:</strong> If you guessed correctly, you score a bonus <strong>🎯 MIND READER</strong> badge!</li>
             </ul>
           </div>
 
-          {/* Step 5: Special Chaos & Double Points */}
+          {/* Step 5: Streaks & Multipliers */}
           <div className="howtoplay-step-card">
-            <div className="step-number-badge step-number-badge--chaos">STEP 5 (TWISTS)</div>
-            <h2 className="about-card-heading">⚠️ Chaos & 🔥 Double Points Rounds</h2>
+            <div className="step-number-badge step-number-badge--chaos">STEP 5 (SCORING)</div>
+            <h2 className="about-card-heading">🔥 Streaks, Multipliers & Live Mascot</h2>
             <ul className="about-bullets">
-              <li><strong>Round 9 (⚠️ CHAOS ROUND):</strong> Absurd superpower & wild life dilemmas (e.g. ₹10 crore no internet for 1 year).</li>
-              <li><strong>Round 15 (🔥 DOUBLE POINTS):</strong> Matching on this high-stakes round awards <strong>+2 points</strong> to your score!</li>
+              <li><strong>⚡ MATCH (+1 Pt):</strong> Both picked the same option! Triggers celebrations & streak combos.</li>
+              <li><strong>💀 NO MATCH (0 Pts):</strong> Different answers! Mascot gives funny live commentary on your clash.</li>
+              <li><strong>🔥 2X DOUBLE POINTS (R15):</strong> High-stakes round where a match awards <strong>+2 points</strong>!</li>
+              <li><strong>⚡ STREAK COMBO:</strong> Hitting 3+ matches in a row unlocks telepathic energy and custom tiger animations.</li>
             </ul>
           </div>
 
-          {/* Step 6: AI Report & Social Sharing */}
+          {/* Step 6: Compatibility Report & Same-Room Rematch */}
           <div className="howtoplay-step-card">
             <div className="step-number-badge">STEP 6</div>
-            <h2 className="about-card-heading">🔮 AI Breakdown & Social Share Cards</h2>
+            <h2 className="about-card-heading">📊 Psychological Verdict & Instant Rematch</h2>
             <p className="about-card-text">
-              At the end of 20 rounds (or if interrupted midway):
+              At the end of the game, unlock your personalized chemistry report:
             </p>
             <ul className="about-bullets">
-              <li><strong>📊 Category Match Rates:</strong> See how you synced on Food, Cinema, Travel, and Life.</li>
-              <li><strong>🏆 Achievements Unlocked:</strong> Earn badges like <em>🍜 Food Soulmates</em>, <em>🎬 Cinema Twins</em>, or <em>😂 Chaos Partners</em>.</li>
-              <li><strong>🎭 Plot Contradictions:</strong> Laugh at funny contradictory answer patterns detected by the AI.</li>
-              <li><strong>📸 1080×1350 PNG Card:</strong> Download or share directly on WhatsApp & Instagram Stories to challenge other friends!</li>
+              <li><strong>🔥 Match Sync %:</strong> Exact compatibility score and instinct sync rating.</li>
+              <li><strong>🧠 Real Nature Breakdown:</strong> Psychological archetypes and moral alignments.</li>
+              <li><strong>🎭 Plot Contradictions:</strong> Hilarious contradictions discovered between your answers.</li>
+              <li><strong>📸 1080×1350 Share Card:</strong> Generate & download a high-res story card for Instagram & WhatsApp!</li>
+              <li><strong>🔄 Play Again Rematch:</strong> Tap <strong>"PLAY AGAIN"</strong> to restart in the exact same room instantly without re-typing codes!</li>
             </ul>
           </div>
         </div>

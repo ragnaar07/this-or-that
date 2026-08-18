@@ -1,12 +1,15 @@
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import type { PlayerSession, RoomState } from '../types/game';
 import { TigerMascot } from '../components/TigerMascot';
 import { shareResultCard } from '../utils/generateResultCard';
+import { api } from '../services/api';
+import { usePolling } from '../hooks/usePolling';
 
 interface ResultProps {
   session: PlayerSession;
   room: RoomState;
-  onPlayAgain: (selectedMode?: string) => void;
+  onPlayAgain: (newRoom?: RoomState) => void;
+  onGoHome: () => void;
 }
 
 interface AnimatedCompatibilityScoreProps {
@@ -116,12 +119,43 @@ function AnimatedCompatibilityScore({ value }: AnimatedCompatibilityScoreProps) 
   );
 }
 
-export function Result({ session, room, onPlayAgain }: ResultProps) {
+export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
   const [revealStep, setRevealStep] = useState<number>(1); // 1 to 5
-  const [selectedPlayMode, setSelectedPlayMode] = useState<string>('RANDOM');
-  const [showModePicker, setShowModePicker] = useState(false);
+
+  // Poll room on Result screen: if opponent restarts the game, transition both players immediately!
+  const pollRoom = useCallback(async () => {
+    try {
+      const res = await api.pollRoom(session.roomCode, session.playerId);
+      if (res.room && res.room.status === 'PLAYING' && res.room.roundNumber === 1 && !res.room.finalReport) {
+        onPlayAgain(res.room);
+      }
+    } catch {}
+  }, [session.roomCode, session.playerId, onPlayAgain]);
+
+  usePolling(pollRoom, 800, true);
+
+  async function handlePlayAgain() {
+    if (isRestarting) return;
+    setIsRestarting(true);
+    try {
+      const res = await api.restartRoom(session.roomCode, session.playerId);
+      if (res.room) {
+        onPlayAgain(res.room);
+        return;
+      }
+      if (res.error) {
+        showToast(res.error);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Could not restart match. Try again.');
+    } finally {
+      setIsRestarting(false);
+    }
+  }
 
   const report = room.finalReport;
   const isInterrupted = room.status === 'INTERRUPTED' || (report && report.isPartial);
@@ -198,47 +232,16 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
     showToast('App link copied! 🔗');
   }
 
-  const GAME_MODES = [
-    { id: 'RANDOM', label: '🎲 RANDOM MIX', desc: 'Surprise mix of everything' },
-    { id: 'INDIA', label: '🇮🇳 INDIA FIRST', desc: 'Everyday desi quirks & habits' },
-    { id: 'ENTERTAINMENT', label: '🎬 BOLLYWOOD & OTT', desc: 'Cinema, cricket, music & memes' },
-    { id: 'FOOD', label: '🍜 FOOD & CHAI', desc: 'Street food, biryani & late-night' },
-    { id: 'CHAOS', label: '😂 CHAOS & DEALS', desc: 'Wild dilemmas & superpowers' },
-    { id: 'DEEP', label: '🧠 DEEP & VALUES', desc: 'Friendship, money & life choices' },
-  ];
-
   const resultActions = (
     <div className="result-actions result-actions--under-card">
-      <div className="play-again-box">
-        <button
-          className="btn btn--pink"
-          onClick={() => setShowModePicker(!showModePicker)}
-          id="play-again-mode-toggle"
-        >
-          🔄 PLAY AGAIN {showModePicker ? '▲' : '▼'}
-        </button>
-
-        {showModePicker && (
-          <div className="mode-picker-modal">
-            <div className="mode-picker-title">CHOOSE NEXT GAME THEME:</div>
-            <div className="mode-chips-grid">
-              {GAME_MODES.map((m) => (
-                <button
-                  key={m.id}
-                  className={`mode-chip ${selectedPlayMode === m.id ? 'mode-chip--active' : ''}`}
-                  onClick={() => {
-                    setSelectedPlayMode(m.id);
-                    onPlayAgain(m.id);
-                  }}
-                >
-                  <div className="mode-chip-name">{m.label}</div>
-                  <div className="mode-chip-desc">{m.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <button
+        className="btn btn--pink"
+        onClick={handlePlayAgain}
+        disabled={isRestarting}
+        id="play-again-btn"
+      >
+        {isRestarting ? '🔄 RESTARTING MATCH...' : '🔄 PLAY AGAIN (REMATCH)'}
+      </button>
 
       <button
         className="btn btn--primary btn--share"
@@ -251,16 +254,14 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
 
       <button
         className="btn btn--secondary"
-        onClick={() => onPlayAgain()}
+        onClick={onGoHome}
         id="result-home-btn"
         style={{ marginTop: 6 }}
       >
         🏠 GO HOME
       </button>
-
     </div>
   );
-
   return (
     <div className="app-wrapper">
       <div className="screen result-screen-container">
@@ -543,6 +544,14 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
                   </div>
                 )}
 
+                {/* Real Nature & Deep Psychology Insight */}
+                {report.realNatureInsight && (
+                  <div className="result-card result-card--real-nature">
+                    <div className="result-card-title">🧠 REAL NATURE & MORAL COMPASS</div>
+                    <div className="result-card-content">{report.realNatureInsight}</div>
+                  </div>
+                )}
+
                 {/* Final Verdict */}
                 {report.finalVerdict && (
                   <div className="result-card result-card--verdict">
@@ -550,8 +559,20 @@ export function Result({ session, room, onPlayAgain }: ResultProps) {
                     <div className="result-card-content">{report.finalVerdict}</div>
                     {(report.player1Insight || report.player2Insight || report.player1Profile || report.player2Profile) && (
                       <div className="result-profiles">
-                        <p><strong>{hostName}:</strong> {report.player1Insight || report.player1Profile}</p>
-                        <p><strong>{guestName}:</strong> {report.player2Insight || report.player2Profile}</p>
+                        <p>
+                          <strong>
+                            {report.player1Gender === 'female' ? '👩' : report.player1Gender === 'male' ? '👨' : '⚡'}{' '}
+                            {hostName}:
+                          </strong>{' '}
+                          {report.player1Insight || report.player1Profile}
+                        </p>
+                        <p>
+                          <strong>
+                            {report.player2Gender === 'female' ? '👩' : report.player2Gender === 'male' ? '👨' : '⚡'}{' '}
+                            {guestName}:
+                          </strong>{' '}
+                          {report.player2Insight || report.player2Profile}
+                        </p>
                       </div>
                     )}
                   </div>

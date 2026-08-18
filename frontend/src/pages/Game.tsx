@@ -6,6 +6,8 @@ import { GameHeader } from '../components/GameHeader';
 import { Countdown } from '../components/Countdown';
 import { RevealScreen } from '../components/RevealScreen';
 import { SplitAnswerLayout } from '../components/SplitAnswerLayout';
+import { MindReadSplash } from '../components/MindReadSplash';
+import { DeepPsychologySplash } from '../components/DeepPsychologySplash';
 
 interface GameProps {
   session: PlayerSession;
@@ -22,6 +24,10 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showRevealOverlay, setShowRevealOverlay] = useState(initialRoom.status === 'REVEALING');
+  const [showMindReadSplash, setShowMindReadSplash] = useState(false);
+  const [mindReadSplashSeenForRound, setMindReadSplashSeenForRound] = useState<number | null>(null);
+  const [showDeepPsychologySplash, setShowDeepPsychologySplash] = useState(false);
+  const [deepPsychologySplashSeenForRound, setDeepPsychologySplashSeenForRound] = useState<number | null>(null);
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
@@ -33,6 +39,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const isPredictionRound = room.currentRoundType === 'PREDICTION';
   const isChaosRound = room.currentRoundType === 'CHAOS';
   const isDoublePointsRound = room.currentRoundType === 'DOUBLE_POINTS';
+  const isDeepPsychologyRound = room.currentRoundType === 'DEEP_PSYCHOLOGY' || room.currentQuestion?.type === 'DEEP_PSYCHOLOGY';
 
   // Intercept browser / Android back button to show leave confirmation modal
   useEffect(() => {
@@ -67,6 +74,15 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     }
   }, [room.status, room, onGameFinish]);
 
+  // Synchronize initialRoom changes (e.g. rematch / play again in same room)
+  useEffect(() => {
+    setRoom(initialRoom);
+    setMyChoice(null);
+    setMyPrediction(null);
+    setLastRoundNumber(initialRoom.roundNumber);
+    nextRoundRequested.current = false;
+  }, [initialRoom.code, initialRoom.stateVersion]);
+
   // Reset choices when round changes
   useEffect(() => {
     if (room.roundNumber !== lastRoundNumber) {
@@ -98,6 +114,30 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
 
     return () => window.clearTimeout(timer);
   }, [room.status, room.lastResult, room.roundNumber]);
+
+  // Trigger Mind Read Splash on entering a PREDICTION round
+  useEffect(() => {
+    if (
+      isPredictionRound &&
+      room.status === 'PLAYING' &&
+      room.roundNumber > 0 &&
+      mindReadSplashSeenForRound !== room.roundNumber
+    ) {
+      setShowMindReadSplash(true);
+    }
+  }, [isPredictionRound, room.status, room.roundNumber, mindReadSplashSeenForRound]);
+
+  // Trigger Deep Psychology Splash on entering a DEEP_PSYCHOLOGY round
+  useEffect(() => {
+    if (
+      isDeepPsychologyRound &&
+      room.status === 'PLAYING' &&
+      room.roundNumber > 0 &&
+      deepPsychologySplashSeenForRound !== room.roundNumber
+    ) {
+      setShowDeepPsychologySplash(true);
+    }
+  }, [isDeepPsychologyRound, room.status, room.roundNumber, deepPsychologySplashSeenForRound]);
 
   // Polling — 700ms sequential polling for near-realtime feel with monotonic version checking
   const pollRoom = useCallback(async () => {
@@ -308,6 +348,29 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Full-screen Mind Read Round Splash Overlay */}
+      {showMindReadSplash && (
+        <MindReadSplash
+          opponentName={opponentName}
+          roundNumber={room.roundNumber}
+          onComplete={() => {
+            setShowMindReadSplash(false);
+            setMindReadSplashSeenForRound(room.roundNumber);
+          }}
+        />
+      )}
+
+      {/* Full-screen Deep Psychology Round Splash Overlay */}
+      {showDeepPsychologySplash && (
+        <DeepPsychologySplash
+          roundNumber={room.roundNumber}
+          onComplete={() => {
+            setShowDeepPsychologySplash(false);
+            setDeepPsychologySplashSeenForRound(room.roundNumber);
+          }}
+        />
       )}
 
       {/* Full-screen reveal overlay */}

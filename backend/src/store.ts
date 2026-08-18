@@ -66,3 +66,13 @@ export function setPlayerAnswer(
 export function clearRoundAnswers(roomCode: string, roundNumber: number): void {
   answers.delete(answerKey(roomCode, roundNumber));
 }
+
+export function clearAllRoomAnswers(roomCode: string): void {
+  const upper = roomCode.toUpperCase();
+  for (const key of answers.keys()) {
+    if (key.startsWith(upper + '::')) {
+      answers.delete(key);
+    }
+  }
+}
+

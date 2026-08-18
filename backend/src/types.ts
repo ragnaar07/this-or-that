@@ -3,8 +3,8 @@
 // ============================================================
 
 export type QuestionFormat = 'QUICK' | 'SITUATIONAL';
-export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'NORMAL';
-export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'WILDCARD';
+export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'NORMAL';
+export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'WILDCARD';
 
 export interface Question {
   id?: string;
@@ -12,7 +12,7 @@ export interface Question {
   subcategory?: string;
   format?: QuestionFormat;
   type?: QuestionType;
-  timeLimit?: number; // 10s for QUICK, 16s for SITUATIONAL/CHAOS/PREDICTION/CURRENT
+  timeLimit?: number; // 10s for QUICK, 16s for SITUATIONAL/CHAOS/PREDICTION/CURRENT, 18-20s for SPECIAL
   difficulty?: 1 | 2 | 3 | 4;
   scenario?: string;
   question?: string;
@@ -98,6 +98,9 @@ export interface FinalReport {
   player2Insight?: string;
   player1Profile?: string;
   player2Profile?: string;
+  player1Gender?: 'male' | 'female' | 'other';
+  player2Gender?: 'male' | 'female' | 'other';
+  realNatureInsight?: string;
   finalVerdict: string;
   isPartial: boolean;
   interruptedReason?: string;
@@ -112,10 +115,13 @@ export interface Room {
   code: string;
   hostPlayerId: string;
   hostPlayerName: string;
+  hostGender?: 'male' | 'female' | 'other';
   hostLastSeenAt: number;
   guestPlayerId: string | null;
   guestPlayerName: string | null;
+  guestGender?: 'male' | 'female' | 'other';
   guestLastSeenAt: number | null;
+  deepPsychology: boolean;
   status: RoomStatus;
   roundNumber: number;
   totalRounds: number; // default 20

@@ -19,7 +19,7 @@ export function About({ onBack, onOpenHowToPlay }: AboutProps) {
           >
             ← BACK
           </button>
-          <div className="about-header-tag">ABOUT THIS ⚡ THAT</div>
+          <div className="about-header-tag">ABOUT US 💡</div>
         </div>
 
         {/* Hero Section */}
@@ -29,87 +29,83 @@ export function About({ onBack, onOpenHowToPlay }: AboutProps) {
             THIS <span style={{ color: 'var(--color-pink)' }}>⚡</span> THAT
           </h1>
           <p className="about-hero-tagline">
-            India's AI-Powered Multiplayer Chemistry & Synchronization Game
+            The Live 2-Player Mind Matching & Instinct Chemistry Game
           </p>
           <div className="about-quote-box">
-            "A game that starts with two simple choices, but by the end makes you say:
+            "A game that starts with two simple choices, but by round 10 makes you say:
             <br />
-            <strong>'BRO... HOW DID THIS GAME KNOW THAT?!' 😂</strong>"
+            <strong>'BRO... ARE WE THE SAME PERSON?!' 😂⚡</strong>"
           </div>
+        </div>
+
+        {/* Story Section */}
+        <div className="about-feature-card" style={{ borderColor: 'rgba(255, 62, 165, 0.4)' }}>
+          <div className="about-card-badge badge--pink">🔥 WHY WE BUILT THIS</div>
+          <h2 className="about-card-heading">Kill Small Talk. Find Real Chemistry.</h2>
+          <p className="about-card-text">
+            Boring trivia quizzes ask trivia facts. <strong>THIS ⚡ THAT</strong> is built around <em>human psychology, raw instincts, and daily life choices</em>.
+          </p>
+          <p className="about-card-text" style={{ marginTop: 8 }}>
+            Whether you're playing with your best friend, partner, crush, sibling, or roommate, it puts your real thoughts on the table in under 3 minutes of high-speed fun.
+          </p>
         </div>
 
         {/* Feature Grid / Cards */}
         <div className="about-cards-list">
-          {/* Card 1: AI Question Engine */}
+          {/* Card 1: 10,000 Questions */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--pink">⚡ NO FIXED QUESTIONS</div>
-            <h2 className="about-card-heading">Real-Time AI-Powered Question Engine</h2>
+            <div className="about-card-badge badge--violet">⚡ 10,000+ FRESH DILEMMAS</div>
+            <h2 className="about-card-heading">Zero Repetition, Pure Relatability</h2>
             <p className="about-card-text">
-              Unlike ordinary quiz apps with static, repetitive databases, <strong>THIS ⚡ THAT</strong> uses an advanced AI engine to dynamically generate fresh, contextual, and unpredictable choices on the fly for every single round. You will virtually never see the same game twice.
+              From late-night Maggi vs Swiggy cravings, to ₹10 Crore dilemmas, Goa trip chaos, and career decisions — our curated database of 10,000+ questions ensures every match feels completely fresh.
             </p>
             <div className="about-pill-row">
-              <span className="about-sub-pill">Dynamic 4-Tier Curve</span>
-              <span className="about-sub-pill">Real-Time AI Prompting</span>
-              <span className="about-sub-pill">Zero Repetition</span>
+              <span className="about-sub-pill">Food & Lifestyle</span>
+              <span className="about-sub-pill">Cinema & Culture</span>
+              <span className="about-sub-pill">Chaos & Superpowers</span>
             </div>
           </div>
 
-          {/* Card 2: India-First Culture */}
+          {/* Card 2: Deep Psychology */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--violet">🇮🇳 INDIA-FIRST & ULTRA RELATABLE</div>
-            <h2 className="about-card-heading">Crafted for Metros, Tier-2 & Tier-3 Cities</h2>
+            <div className="about-card-badge badge--mint">🧠 DEEP PSYCHOLOGY MODE</div>
+            <h2 className="about-card-heading">Uncover Real Human Nature</h2>
             <p className="about-card-text">
-              Built from the ground up for diverse Indian lifestyles — exploring everyday relatable quirks without lazy stereotypes:
-            </p>
-            <ul className="about-bullets">
-              <li><strong>Food & Chai:</strong> Tapri chai vs cafe coffee, late-night Maggi vs Swiggy, biryani preferences.</li>
-              <li><strong>Bollywood & Cricket:</strong> Classic romance vs thriller, last over stress, stadium vs sofa.</li>
-              <li><strong>Social Quirks:</strong> Shaadi dance floor vs food corner, "5 min mein aa raha hoon" mental math.</li>
-              <li><strong>Digital Habits:</strong> 3-min voice notes vs "text kar", UPI processing panic, 2 AM reel spirals.</li>
-              <li><strong>Life & Ambition:</strong> PG vs home comfort, Goa squad trip vs solo Himachal trek, saving vs luxury travel.</li>
-            </ul>
-          </div>
-
-          {/* Card 3: Grounded AI Insights */}
-          <div className="about-feature-card">
-            <div className="about-card-badge badge--mint">🧠 GROUNDED BEHAVIORAL INSIGHTS</div>
-            <h2 className="about-card-heading">Real Data-Driven Patterns, Not Horoscopes</h2>
-            <p className="about-card-text">
-              Our AI analysis engine evaluates mathematical category sync rates, identifies hilarious contradictions (e.g. <em>preferring to save money but picking 5-star luxury trips</em>), and awards playful titles like the <strong>Chaos Award 😂</strong>, <strong>Mind Reader Score</strong>, and <strong>Same Brain Highlights</strong>.
+              Enable the Deep Psychology toggle to test your moral compass. High-stakes dilemmas test where loyalty meets truth, career ambitions clash with friendships, and gut ethics get revealed.
             </p>
           </div>
 
-          {/* Card 4: Multiplayer & Adrenaline Timer */}
+          {/* Card 3: Multiplayer */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--gold">⏱️ 10-SECOND ADRENALINE SYNC</div>
-            <h2 className="about-card-heading">Server-Authoritative Realtime Play</h2>
+            <div className="about-card-badge badge--gold">⏱️ REALTIME 10S ADRENALINE</div>
+            <h2 className="about-card-heading">Instant Synchronization, Zero Delay</h2>
             <p className="about-card-text">
-              Both players get a synchronized 10-second timer per round. Backend authoritative evaluation ensures zero lag, instant match reveals, and anti-tamper scoring.
+              Both players lock in choices on synchronized timers with live reactions, animated mascot expressions, and instant match reveals.
             </p>
           </div>
 
-          {/* Card 5: Disconnect Recovery & Partial Results */}
+          {/* Card 4: Installable App */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--orange">🛡️ NEVER LOSE YOUR GAME</div>
-            <h2 className="about-card-heading">Smart Disconnect & Leave Recovery</h2>
+            <div className="about-card-badge badge--orange">📲 PLAY EVERYWHERE (PWA APP)</div>
+            <h2 className="about-card-heading">Install on Android, iOS & Desktop</h2>
             <p className="about-card-text">
-              If an opponent leaves or connection drops midway, our server instantly freezes state and compiles an accurate <strong>Partial Result Report</strong> based on all valid completed rounds.
+              Tap the <strong>"📲 INSTALL APP"</strong> button at the top to add THIS ⚡ THAT straight to your home screen! Works like a native mobile app with instant launch and zero app store downloads required.
             </p>
           </div>
 
-          {/* Card 6: 1080x1350 Social Card */}
+          {/* Card 5: Social Card */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--pink">📸 1080 × 1350 SOCIAL CARDS</div>
+            <div className="about-card-badge badge--pink">📸 VIRAL RESULT CARDS</div>
             <h2 className="about-card-heading">Share Instantly on WhatsApp & Stories</h2>
             <p className="about-card-text">
-              Generate a high-DPI social media card directly on your device with zero server upload. 1-tap WhatsApp sharing, native file sharing, and direct PNG downloads.
+              Generate a high-res 1080×1350 story card highlighting your match percentage, funny plot contradictions, and psychological archetypes with 1-tap WhatsApp sharing!
             </p>
           </div>
         </div>
 
         {/* Privacy Note */}
         <div className="about-privacy-note">
-          🔒 <strong>Privacy First:</strong> We do not track personal data, store sensitive info, or make clinical psychological claims. This game is built 100% for pure entertainment, friendly debates, and laughter.
+          🔒 <strong>100% Free & Privacy First:</strong> No login, no password, no email required. Jump straight into the room and start matching minds!
         </div>
 
         {/* CTA Buttons */}

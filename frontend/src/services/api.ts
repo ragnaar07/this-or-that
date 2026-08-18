@@ -36,17 +36,24 @@ async function request<T>(
 }
 
 export const api = {
-  async createRoom(playerName: string, totalRounds = 20, gameMode = 'RANDOM', aiTone = 'fun') {
+  async createRoom(
+    playerName: string,
+    gender: 'male' | 'female' | 'other' = 'other',
+    deepPsychology = true,
+    totalRounds = 20,
+    gameMode = 'INDIA',
+    aiTone = 'fun'
+  ) {
     return request('/api/rooms', {
       method: 'POST',
-      body: JSON.stringify({ playerName, totalRounds, gameMode, aiTone }),
+      body: JSON.stringify({ playerName, gender, deepPsychology, totalRounds, gameMode, aiTone }),
     });
   },
 
-  async joinRoom(code: string, playerName: string) {
+  async joinRoom(code: string, playerName: string, gender: 'male' | 'female' | 'other' = 'other') {
     return request(`/api/rooms/${code}/join`, {
       method: 'POST',
-      body: JSON.stringify({ playerName }),
+      body: JSON.stringify({ playerName, gender }),
     });
   },
 
@@ -75,6 +82,13 @@ export const api = {
     });
   },
 
+  async restartRoom(code: string, playerId: string) {
+    return request(`/api/rooms/${code}/restart`, {
+      method: 'POST',
+      body: JSON.stringify({ playerId }),
+    });
+  },
+
   async leaveRoom(code: string, playerId: string) {
     return request(`/api/rooms/${code}/leave`, {
       method: 'DELETE',
@@ -82,3 +96,4 @@ export const api = {
     });
   },
 };
+

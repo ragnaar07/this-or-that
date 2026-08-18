@@ -11,6 +11,7 @@ dotenv.config();
 
 import { generateRoomCode, isValidRoomCode } from './roomCode';
 import { generateQuestion, generateFinalReport, generateLiveReaction } from './questionService';
+import { isGeminiEnabled } from './geminiService';
 import { getRoundTypeForRound } from './fallbackQuestions';
 import {
   getRoom,
@@ -19,6 +20,7 @@ import {
   getRoundAnswers,
   setPlayerAnswer,
   clearRoundAnswers,
+  clearAllRoomAnswers,
   getAllRooms,
 } from './store';
 import { Room, Answer, RoundHistoryItem, RoundType, QuestionType, QuestionFormat } from './types';
@@ -72,6 +74,13 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', ok: true, timestamp: Date.now() });
 });
 
+app.get('/api/ai/status', (_req: Request, res: Response) => {
+  res.json({
+    geminiEnabled: isGeminiEnabled(),
+    timestamp: Date.now(),
+  });
+});
+
 // ============================================================
 // POST /api/rooms — Create a new room
 // Body: { playerName?: string, totalRounds?: number, gameMode?: string, aiTone?: string }
@@ -80,10 +89,13 @@ app.post('/api/rooms', (req: Request, res: Response) => {
   try {
     const rawName = (req.body?.playerName as string | undefined)?.trim();
     const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 1';
+    const rawGender = req.body?.gender;
+    const hostGender = (['male', 'female', 'other'].includes(rawGender) ? rawGender : 'other') as 'male' | 'female' | 'other';
+    const deepPsychology = req.body?.deepPsychology !== false;
     const totalRounds = typeof req.body?.totalRounds === 'number' && req.body.totalRounds > 0
       ? Math.min(req.body.totalRounds, 50)
       : DEFAULT_TOTAL_ROUNDS;
-    const gameMode = String(req.body?.gameMode || 'RANDOM').toUpperCase();
+    const gameMode = String(req.body?.gameMode || 'INDIA').toUpperCase();
     const aiTone = (['nice', 'fun', 'brutal'].includes(req.body?.aiTone) ? req.body.aiTone : 'fun') as 'nice' | 'fun' | 'brutal';
 
     const playerId = generatePlayerId();
@@ -100,10 +112,13 @@ app.post('/api/rooms', (req: Request, res: Response) => {
       code,
       hostPlayerId: playerId,
       hostPlayerName: playerName,
+      hostGender,
       hostLastSeenAt: now,
       guestPlayerId: null,
       guestPlayerName: null,
+      guestGender: 'other',
       guestLastSeenAt: null,
+      deepPsychology,
       status: 'WAITING',
       roundNumber: 0,
       totalRounds,
@@ -133,7 +148,7 @@ app.post('/api/rooms', (req: Request, res: Response) => {
     };
 
     setRoom(room);
-    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}", Mode: ${gameMode}, Tone: ${aiTone}`);
+    console.log(`[ROOM CREATED] Code: ${code}, Host: "${playerName}" (${hostGender}), Mode: ${gameMode}, DeepPsy: ${deepPsychology}, Tone: ${aiTone}`);
 
     res.json({
       success: true,
@@ -172,11 +187,24 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
 
     const rawName = (req.body?.playerName as string | undefined)?.trim();
     const playerName = rawName && rawName.length > 0 ? rawName.slice(0, 20) : 'Player 2';
+    const rawGender = req.body?.gender;
+    const guestGender = (['male', 'female', 'other'].includes(rawGender) ? rawGender : 'other') as 'male' | 'female' | 'other';
     const playerId = generatePlayerId();
 
     // Round 1 Setup
-    const roundType = getRoundTypeForRound(1);
-    const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], 1, roundType, room.gameMode);
+    const roundType = getRoundTypeForRound(1, room.deepPsychology !== false);
+    const question = await generateQuestion(
+      room.recentQuestions,
+      room.recentCategories || [],
+      1,
+      roundType,
+      room.gameMode,
+      room.hostPlayerName,
+      playerName,
+      room.hostGender || 'other',
+      guestGender,
+      room.deepPsychology !== false
+    );
     const now = Date.now();
     const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
     const durationMs = timeLimit * 1000;
@@ -185,6 +213,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
       ...room,
       guestPlayerId: playerId,
       guestPlayerName: playerName,
+      guestGender,
       guestLastSeenAt: now,
       status: 'PLAYING',
       roundNumber: 1,
@@ -201,7 +230,7 @@ app.post('/api/rooms/:code/join', async (req: Request, res: Response) => {
     };
 
     setRoom(updatedRoom);
-    console.log(`[GUEST JOINED] Room ${code}: "${playerName}" joined! Round 1 (${roundType}, ${question.format || 'QUICK'} - ${timeLimit}s): "${question.optionA}" vs "${question.optionB}"`);
+    console.log(`[GUEST JOINED] Room ${code}: "${playerName}" (${guestGender}) joined! Round 1 (${roundType}, ${question.format || 'QUICK'} - ${timeLimit}s): "${question.optionA}" vs "${question.optionB}"`);
 
     res.json({
       success: true,
@@ -389,8 +418,19 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
     }
 
     const nextRound = room.roundNumber + 1;
-    const nextRoundType = getRoundTypeForRound(nextRound);
-    const question = await generateQuestion(room.recentQuestions, room.recentCategories || [], nextRound, nextRoundType, room.gameMode);
+    const nextRoundType = getRoundTypeForRound(nextRound, room.deepPsychology !== false);
+    const question = await generateQuestion(
+      room.recentQuestions,
+      room.recentCategories || [],
+      nextRound,
+      nextRoundType,
+      room.gameMode,
+      room.hostPlayerName,
+      room.guestPlayerName || 'Player 2',
+      room.hostGender || 'other',
+      room.guestGender || 'other',
+      room.deepPsychology !== false
+    );
     const now = Date.now();
     const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
     const durationMs = timeLimit * 1000;
@@ -420,6 +460,109 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[POST /api/rooms/:code/next-round] Error:', err);
     res.status(500).json({ error: 'Could not advance round.' });
+  }
+});
+
+// ============================================================
+// POST /api/rooms/:code/restart — Rematch / Play Again in same room
+// ============================================================
+app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
+  try {
+    const code = String(req.params.code || '').toUpperCase().trim();
+    const { playerId } = req.body ?? {};
+
+    const room = getRoom(code);
+    if (!room) {
+      return res.status(404).json({ error: 'ROOM NOT FOUND.' });
+    }
+
+    if (playerId !== room.hostPlayerId && playerId !== room.guestPlayerId) {
+      return res.status(403).json({ error: 'Only players in this room can restart the game.' });
+    }
+
+    clearAllRoomAnswers(code);
+
+    const now = Date.now();
+    // If guest is present, restart immediately into round 1
+    if (room.guestPlayerId) {
+      const roundType = getRoundTypeForRound(1, room.deepPsychology !== false);
+      const question = await generateQuestion(
+        [],
+        [],
+        1,
+        roundType,
+        room.gameMode,
+        room.hostPlayerName,
+        room.guestPlayerName || 'Player 2',
+        room.hostGender || 'other',
+        room.guestGender || 'other',
+        room.deepPsychology !== false
+      );
+      const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
+      const durationMs = timeLimit * 1000;
+
+      const restartedRoom: Room = {
+        ...room,
+        status: 'PLAYING',
+        roundNumber: 1,
+        currentQuestion: question,
+        currentRoundType: roundType,
+        currentTimeLimit: timeLimit,
+        currentQuestionFormat: question.format || 'QUICK',
+        roundStartedAt: now,
+        roundDeadline: now + durationMs,
+        matches: 0,
+        total: 0,
+        score: 0,
+        streak: 0,
+        lastResult: null,
+        lastHostChoice: null,
+        lastGuestChoice: null,
+        lastHostPrediction: null,
+        lastGuestPrediction: null,
+        lastHostPredictionResult: null,
+        lastGuestPredictionResult: null,
+        lastLiveReaction: null,
+        recentQuestions: [question.optionA],
+        recentCategories: [question.category],
+        history: [],
+        finalReport: null,
+        interruptedReason: undefined,
+        leftBy: undefined,
+        leftAt: undefined,
+        stateVersion: (room.stateVersion || 1) + 1,
+        updatedAt: now,
+      };
+
+      setRoom(restartedRoom);
+      console.log(`[RESTART GAME] Room ${code} restarted by ${playerId === room.hostPlayerId ? room.hostPlayerName : room.guestPlayerName}! Round 1 started.`);
+      return res.json({ success: true, room: sanitizeRoom(restartedRoom) });
+    } else {
+      // Guest is not present, reset to waiting
+      const waitingRoom: Room = {
+        ...room,
+        status: 'WAITING',
+        roundNumber: 0,
+        currentQuestion: null,
+        matches: 0,
+        total: 0,
+        score: 0,
+        streak: 0,
+        lastResult: null,
+        history: [],
+        finalReport: null,
+        interruptedReason: undefined,
+        leftBy: undefined,
+        leftAt: undefined,
+        stateVersion: (room.stateVersion || 1) + 1,
+        updatedAt: now,
+      };
+      setRoom(waitingRoom);
+      return res.json({ success: true, room: sanitizeRoom(waitingRoom) });
+    }
+  } catch (err) {
+    console.error('[POST /api/rooms/:code/restart] Error:', err);
+    res.status(500).json({ error: 'Could not restart game.' });
   }
 });
 
@@ -658,7 +801,11 @@ async function finishGame(room: Room): Promise<void> {
     false,
     undefined,
     room.gameMode,
-    room.aiTone
+    room.aiTone,
+    undefined,
+    undefined,
+    room.hostGender || 'other',
+    room.guestGender || 'other'
   );
 
   const updated: Room = {
@@ -698,7 +845,9 @@ async function interruptGame(
     room.gameMode,
     room.aiTone,
     leftBy,
-    now
+    now,
+    room.hostGender || 'other',
+    room.guestGender || 'other'
   );
 
   const updated: Room = {
@@ -746,7 +895,10 @@ function sanitizeRoom(room: Room) {
   return {
     code: room.code,
     hostPlayerName: room.hostPlayerName,
+    hostGender: room.hostGender || 'other',
     guestPlayerName: room.guestPlayerName,
+    guestGender: room.guestGender || 'other',
+    deepPsychology: room.deepPsychology !== false,
     status: room.status,
     roundNumber: room.roundNumber,
     totalRounds: room.totalRounds,
@@ -789,4 +941,5 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // ---- Start Server ----
 app.listen(PORT, () => {
   console.log(`🎮 THIS ⚡ THAT V4 server running on http://localhost:${PORT}`);
+  console.log(`🤖 Gemini AI Status: ${isGeminiEnabled() ? '⚡ ACTIVE & READY' : '⚪ Standby (using instant dataset engine)'}`);
 });

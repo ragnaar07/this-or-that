@@ -13,20 +13,43 @@ import {
   RoundType,
 } from './types';
 import { getInstantQuestion, getRoundTypeForRound, getRoundConfiguration } from './dataset/questionsEngine';
-
-// ============================================================
-// 1. Lightning-Fast Question Generator (<1ms)
-// ============================================================
+import { enhanceFinalReportWithGemini, generateGeminiMindReadQuestion } from './geminiService';
 
 export async function generateQuestion(
   recentQuestions: string[] = [],
   recentCategories: string[] = [],
   roundNumber = 1,
   roundType?: RoundType,
-  gameMode = 'RANDOM'
+  gameMode = 'INDIA',
+  hostName = 'Player 1',
+  guestName = 'Player 2',
+  hostGender: 'male' | 'female' | 'other' = 'other',
+  guestGender: 'male' | 'female' | 'other' = 'other',
+  deepPsychology = true
 ): Promise<Question> {
-  const targetRoundType = roundType || getRoundTypeForRound(roundNumber);
-  return getInstantQuestion(recentQuestions, recentCategories, roundNumber, targetRoundType, gameMode);
+  const targetRoundType = roundType || getRoundTypeForRound(roundNumber, deepPsychology);
+  const baseQuestion = getInstantQuestion(recentQuestions, recentCategories, roundNumber, targetRoundType, gameMode);
+
+  // If this is a PREDICTION / Mind Read round, optionally enhance with Gemini AI if available
+  if (targetRoundType === 'PREDICTION') {
+    try {
+      const aiMindRead = await generateGeminiMindReadQuestion(hostName, guestName, hostGender, guestGender);
+      if (aiMindRead && aiMindRead.optionA && aiMindRead.optionB) {
+        return {
+          ...baseQuestion,
+          scenario: aiMindRead.scenario || baseQuestion.scenario,
+          optionA: aiMindRead.optionA,
+          optionB: aiMindRead.optionB,
+          category: aiMindRead.category || baseQuestion.category || 'Mind Reading & Telepathy',
+          timeLimit: 20, // ample time for splash + 2-step prediction
+        };
+      }
+    } catch {
+      // Graceful fallback to base instant question
+    }
+  }
+
+  return baseQuestion;
 }
 
 // ============================================================
@@ -302,10 +325,12 @@ export async function generateFinalReport(
   totalRounds: number,
   isPartial: boolean,
   interruptedReason?: string,
-  gameMode = 'RANDOM',
+  gameMode = 'INDIA',
   aiTone: 'nice' | 'fun' | 'brutal' = 'fun',
   leftBy?: 'host' | 'guest' | 'both',
-  leftAt?: number
+  leftAt?: number,
+  hostGender: 'male' | 'female' | 'other' = 'other',
+  guestGender: 'male' | 'female' | 'other' = 'other'
 ): Promise<FinalReport> {
   const matchPercentage = totalCompleted > 0 ? Math.round((matches / totalCompleted) * 100) : 0;
   const categoryScores = computeCategoryScores(history);
@@ -430,7 +455,19 @@ export async function generateFinalReport(
     diffItems.length > 0 ? `Debate: Why did you pick "${diffItems[0].hostChoice}" vs "${diffItems[0].guestChoice}"?` : `Would your friendship survive a 10-day road trip without GPS?`,
   ];
 
-  return {
+  // Extract Real Nature insight from DEEP_PSYCHOLOGY or high-stakes dilemmas
+  const deepPsyRounds = history.filter(h => h.roundType === 'DEEP_PSYCHOLOGY' || h.questionType === 'DEEP_PSYCHOLOGY' || h.category.toLowerCase().includes('psychology') || h.category.toLowerCase().includes('moral'));
+  let realNatureInsight = `Your situational choices demonstrated strong personal convictions and distinct life codes.`;
+  if (deepPsyRounds.length > 0) {
+    const lastDeep = deepPsyRounds[deepPsyRounds.length - 1];
+    if (lastDeep.result === 'MATCH') {
+      realNatureInsight = `On the Deep Psychology test ("${lastDeep.question}"), you both chose "${lastDeep.hostChoice}"! You share an identical moral compass and deep-rooted authenticity.`;
+    } else {
+      realNatureInsight = `On the Deep Psychology test ("${lastDeep.question}"), ${hostName} chose "${lastDeep.hostChoice}" while ${guestName} chose "${lastDeep.guestChoice}". One prioritizes protective pragmatism while the other follows unbending personal code!`;
+    }
+  }
+
+  const baseReport: FinalReport = {
     headline,
     overallVibe,
     matchPercentage,
@@ -464,6 +501,9 @@ export async function generateFinalReport(
     player2Insight,
     player1Profile: player1Insight,
     player2Profile: player2Insight,
+    player1Gender: hostGender,
+    player2Gender: guestGender,
+    realNatureInsight,
     finalVerdict,
     isPartial,
     interruptedReason,
@@ -473,4 +513,7 @@ export async function generateFinalReport(
     aiTone,
     generatedAt: Date.now(),
   };
+
+  // Enhance with Google Gemini AI (with instant fallback to baseReport)
+  return enhanceFinalReportWithGemini(baseReport, history, hostName, guestName, aiTone, hostGender, guestGender);
 }

@@ -57,7 +57,7 @@ async function runTests() {
   assert(r9Config.roundType === 'CHAOS' && r9Config.timeLimit === 16, 'Round 9 is CHAOS with 16-second timer');
 
   const r10Config = getRoundConfiguration(10);
-  assert(r10Config.roundType === 'PREDICTION' && r10Config.timeLimit === 16, 'Round 10 is PREDICTION with 16-second timer');
+  assert(r10Config.roundType === 'PREDICTION' && r10Config.timeLimit === 20, 'Round 10 is PREDICTION with 20-second timer');
 
   const r15Config = getRoundConfiguration(15);
   assert(r15Config.roundType === 'DOUBLE_POINTS' && r15Config.timeLimit === 16, 'Round 15 is DOUBLE_POINTS with 16-second timer');
@@ -165,6 +165,7 @@ async function runTests() {
     guestPlayerId: 'g1',
     guestPlayerName: 'GuestPlayer',
     guestLastSeenAt: Date.now(),
+    deepPsychology: false,
     status: 'PLAYING',
     roundNumber: 5,
     totalRounds: 20,

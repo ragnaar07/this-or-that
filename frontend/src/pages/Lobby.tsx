@@ -52,16 +52,28 @@ export function Lobby({ session, onGameStart, onCancel }: LobbyProps) {
           </div>
         </div>
 
-        {/* Share instructions */}
-        <div style={{
-          textAlign: 'center',
-          fontSize: '0.82rem',
-          fontWeight: 600,
-          color: 'var(--color-text-muted)',
-          lineHeight: 1.6,
-        }}>
-          Share this code with your friend.<br />
-          They'll enter it on their phone to join.
+        {/* Share Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 360, margin: '8px 0' }}>
+          <button
+            className="btn btn--pink"
+            onClick={() => {
+              const url = `${window.location.origin}?code=${session.roomCode}`;
+              navigator.clipboard.writeText(url);
+              alert(`Invite link copied to clipboard! Room code: ${session.roomCode}`);
+            }}
+            id="copy-invite-link-btn"
+          >
+            📋 COPY INVITE LINK
+          </button>
+          <a
+            className="btn btn--whatsapp"
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Play THIS ⚡ THAT with me! Room Code: ${session.roomCode} 👉 ${window.location.origin}?code=${session.roomCode}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            id="whatsapp-invite-btn"
+          >
+            💬 INVITE ON WHATSAPP
+          </a>
         </div>
 
         {/* Cancel */}

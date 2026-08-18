@@ -140,7 +140,16 @@ export default function App() {
         <Result
           session={session}
           room={roomState}
-          onPlayAgain={goHome}
+          onPlayAgain={(newRoom) => {
+            if (newRoom) {
+              console.log('[APP] Rematch started for room:', newRoom.code);
+              setRoomState(newRoom);
+              setScreen('GAME');
+            } else {
+              goHome();
+            }
+          }}
+          onGoHome={goHome}
         />
       )}
     </>

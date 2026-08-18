@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { SynqLogo } from './SynqLogo';
 import { GameWordmark } from './GameWordmark';
+import { InstallAppButton } from './InstallAppButton';
 
 interface NavBarProps {
   currentScreen?: string;
@@ -96,6 +97,7 @@ export function NavBar({
             >
               💡 ABOUT US
             </button>
+            <InstallAppButton />
           </nav>
 
           {/* Mobile Hamburger Toggle Button (<= 640px) */}
@@ -181,6 +183,8 @@ export function NavBar({
                   <span className="mobile-nav-sub">The story behind SYNQ</span>
                 </div>
               </button>
+
+              <InstallAppButton variant="drawer" />
             </div>
 
             <div className="mobile-drawer-footer">

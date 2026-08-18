@@ -22,6 +22,130 @@ export interface RawDatasetQuestion {
 // In-memory typed store
 const ALL_QUESTIONS: RawDatasetQuestion[] = questionsData as RawDatasetQuestion[];
 
+// Dedicated Deep Psychology Dilemmas (Unfiltered Real Nature)
+export const RAW_DEEP_PSYCHOLOGY_QUESTIONS: RawDatasetQuestion[] = [
+  {
+    id: 'dp_1',
+    rawId: 90001,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Cover up and give a fake alibi for your friend',
+    optionB: 'Refuse and tell them to surrender to police',
+  },
+  {
+    id: 'dp_2',
+    rawId: 90002,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Tell your friend with proof immediately',
+    optionB: 'Stay silent and stay out of their relationship',
+  },
+  {
+    id: 'dp_3',
+    rawId: 90003,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Withdraw ₹50L quietly & invest secretly',
+    optionB: 'Report the glitch to the bank immediately',
+  },
+  {
+    id: 'dp_4',
+    rawId: 90004,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Take the dream career and cut ties',
+    optionB: 'Stay with your childhood friend group',
+  },
+  {
+    id: 'dp_5',
+    rawId: 90005,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: '100% Blind, unconditional loyalty',
+    optionB: '100% Brutal, unfiltered honesty',
+  },
+  {
+    id: 'dp_6',
+    rawId: 90006,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Step in and fiercely defend them publicly',
+    optionB: 'Laugh along so it doesn’t get awkward',
+  },
+  {
+    id: 'dp_7',
+    rawId: 90007,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Forgive them (curiosity is normal human nature)',
+    optionB: 'Break up / Big fight (personal boundary violated)',
+  },
+  {
+    id: 'dp_8',
+    rawId: 90008,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Cut them off in complete silence forever',
+    optionB: 'Confront them face-to-face in brutal detail',
+  },
+  {
+    id: 'dp_9',
+    rawId: 90009,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Take the blame & secure the high promotion',
+    optionB: 'Expose the corrupt boss with evidence',
+  },
+  {
+    id: 'dp_10',
+    rawId: 90010,
+    category: 'Deep Psychology & Moral Compass',
+    format: 'SITUATIONAL',
+    type: 'DEEP_PSYCHOLOGY',
+    timeLimit: 18,
+    roundType: 'DEEP_PSYCHOLOGY',
+    gameModes: ['INDIA', 'RANDOM', 'DEEP'],
+    optionA: 'Keep the ₹20,000 cash quietly',
+    optionB: 'Run and return the cash immediately',
+  },
+];
+
 // O(1) Pre-calculated Multi-dimensional Index Maps
 const MODE_FORMAT_POOLS = new Map<string, RawDatasetQuestion[]>();
 const MODE_ROUND_POOLS = new Map<string, RawDatasetQuestion[]>();
@@ -73,10 +197,14 @@ const MODE_ALL_POOLS = new Map<string, RawDatasetQuestion[]>();
     }
   }
 
-  // Pre-seed CHAOS, PREDICTION, and DOUBLE_POINTS for modes where they might be sparse
+  // Pre-seed CHAOS, PREDICTION, DOUBLE_POINTS, and DEEP_PSYCHOLOGY for all modes
   const allChaos = ALL_QUESTIONS.filter(q => q.category === 'Crazy & Superpowers' || q.type === 'CHAOS' || q.roundType === 'CHAOS');
   const allPrediction = ALL_QUESTIONS.filter(q => q.category === 'Friendship & Relationships' || q.category === 'Digital & Memes' || q.type === 'EDGE' || q.type === 'FUNNY');
   const allDoublePoints = ALL_QUESTIONS.filter(q => q.category === 'Money & Career' || q.category === 'Deep & Philosophy' || q.type === 'EDGE');
+  const allDeepPsychology = [
+    ...RAW_DEEP_PSYCHOLOGY_QUESTIONS,
+    ...ALL_QUESTIONS.filter(q => q.category === 'Deep & Philosophy' || q.category === 'Friendship & Relationships' || q.type === 'EDGE')
+  ];
 
   for (const m of ['RANDOM', 'INDIA', 'ENTERTAINMENT', 'FOOD', 'CHAOS', 'DEEP']) {
     if (!MODE_ROUND_POOLS.has(`${m}___CHAOS`)) {
@@ -88,9 +216,15 @@ const MODE_ALL_POOLS = new Map<string, RawDatasetQuestion[]>();
     if (!MODE_ROUND_POOLS.has(`${m}___DOUBLE_POINTS`)) {
       MODE_ROUND_POOLS.set(`${m}___DOUBLE_POINTS`, allDoublePoints);
     }
+    if (!MODE_ROUND_POOLS.has(`${m}___DEEP_PSYCHOLOGY`)) {
+      MODE_ROUND_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
+    }
+    if (!MODE_TYPE_POOLS.has(`${m}___DEEP_PSYCHOLOGY`)) {
+      MODE_TYPE_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
+    }
   }
 
-  console.log(`⚡ [QUESTIONS ENGINE] Pre-indexed ${ALL_QUESTIONS.length} questions into fast pools.`);
+  console.log(`⚡ [QUESTIONS ENGINE] Pre-indexed ${ALL_QUESTIONS.length + RAW_DEEP_PSYCHOLOGY_QUESTIONS.length} questions into fast pools.`);
 })();
 
 // Signature normalization for fast duplicate checks
@@ -108,25 +242,33 @@ export interface RoundConfig {
   isSpecial?: boolean;
 }
 
-export function getRoundConfiguration(roundNumber: number): RoundConfig {
+export function getRoundConfiguration(roundNumber: number, deepPsychology = true): RoundConfig {
   if (roundNumber === 1) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 2) return { format: 'SITUATIONAL', type: 'SITUATIONAL', timeLimit: 16, roundType: 'NORMAL' };
   if (roundNumber === 3) return { format: 'QUICK', type: 'FUNNY', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 4) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 5) return { format: 'SITUATIONAL', type: 'CURRENT', timeLimit: 16, roundType: 'NORMAL' };
-  if (roundNumber === 6) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
+  if (roundNumber === 6) {
+    return deepPsychology
+      ? { format: 'SITUATIONAL', type: 'DEEP_PSYCHOLOGY', timeLimit: 18, roundType: 'DEEP_PSYCHOLOGY', isSpecial: true }
+      : { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
+  }
   if (roundNumber === 7) return { format: 'SITUATIONAL', type: 'EDGE', timeLimit: 16, roundType: 'NORMAL' };
   if (roundNumber === 8) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 9) return { format: 'SITUATIONAL', type: 'CHAOS', timeLimit: 16, roundType: 'CHAOS', isSpecial: true };
-  if (roundNumber === 10) return { format: 'SITUATIONAL', type: 'PREDICTION', timeLimit: 16, roundType: 'PREDICTION', isSpecial: true };
+  if (roundNumber === 10) return { format: 'SITUATIONAL', type: 'PREDICTION', timeLimit: 20, roundType: 'PREDICTION', isSpecial: true };
   if (roundNumber === 11) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 12) return { format: 'SITUATIONAL', type: 'FUNNY', timeLimit: 16, roundType: 'NORMAL' };
-  if (roundNumber === 13) return { format: 'SITUATIONAL', type: 'EDGE', timeLimit: 16, roundType: 'NORMAL' };
+  if (roundNumber === 13) {
+    return deepPsychology
+      ? { format: 'SITUATIONAL', type: 'DEEP_PSYCHOLOGY', timeLimit: 18, roundType: 'DEEP_PSYCHOLOGY', isSpecial: true }
+      : { format: 'SITUATIONAL', type: 'EDGE', timeLimit: 16, roundType: 'NORMAL' };
+  }
   if (roundNumber === 14) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 15) return { format: 'SITUATIONAL', type: 'DOUBLE_POINTS', timeLimit: 16, roundType: 'DOUBLE_POINTS', isSpecial: true };
   if (roundNumber === 16) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber === 17) return { format: 'SITUATIONAL', type: 'CHAOS', timeLimit: 16, roundType: 'CHAOS', isSpecial: true };
-  if (roundNumber === 18) return { format: 'SITUATIONAL', type: 'PREDICTION', timeLimit: 16, roundType: 'PREDICTION', isSpecial: true };
+  if (roundNumber === 18) return { format: 'SITUATIONAL', type: 'PREDICTION', timeLimit: 20, roundType: 'PREDICTION', isSpecial: true };
   if (roundNumber === 19) return { format: 'QUICK', type: 'QUICK', timeLimit: 10, roundType: 'NORMAL' };
   if (roundNumber >= 20) return { format: 'SITUATIONAL', type: 'DOUBLE_POINTS', timeLimit: 16, roundType: 'DOUBLE_POINTS', isSpecial: true };
 
@@ -139,8 +281,8 @@ export function getRoundConfiguration(roundNumber: number): RoundConfig {
   };
 }
 
-export function getRoundTypeForRound(roundNumber: number): RoundType {
-  return getRoundConfiguration(roundNumber).roundType;
+export function getRoundTypeForRound(roundNumber: number, deepPsychology = true): RoundType {
+  return getRoundConfiguration(roundNumber, deepPsychology).roundType;
 }
 
 // Global fast rotation pointer
@@ -184,7 +326,7 @@ export function getInstantQuestion(
         const item = rtPool[(cursor + i) % rtPool.length];
         if ((!forbiddenCat || item.category !== forbiddenCat) && !recentSigSet.has(normalizeSignature(item.optionA, ''))) {
           cursor = (cursor + i + 1) % rtPool.length;
-          return formatOutputQuestion(item, targetFormat, (actualRoundType as QuestionType), 16, actualRoundType);
+          return formatOutputQuestion(item, targetFormat, (actualRoundType as QuestionType), timeLimit, actualRoundType);
         }
       }
     }
