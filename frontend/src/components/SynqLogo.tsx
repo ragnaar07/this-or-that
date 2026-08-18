@@ -24,14 +24,15 @@ export function SynqLogo({
       role={onClick ? 'button' : 'img'}
       aria-label="SYNQ Logo"
     >
-      <svg
-        width={dimensions.iconWidth}
-        height={dimensions.iconHeight}
-        viewBox="0 0 160 180"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="synq-logo-svg"
-      >
+      <div className="synq-logo-circle-badge">
+        <svg
+          width={dimensions.iconWidth}
+          height={dimensions.iconHeight}
+          viewBox="0 0 160 180"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="synq-logo-svg"
+        >
         <defs>
           {/* Orange/Coral gradient */}
           <linearGradient id="synqOrangeGrad" x1="20" y1="60" x2="80" y2="160" gradientUnits="userSpaceOnUse">
@@ -134,6 +135,7 @@ export function SynqLogo({
         {/* Middle Sync Heart Spark */}
         <circle cx="68" cy="112" r="3.5" fill="#FFFDE7" opacity="0.9" />
       </svg>
+      </div>
 
       {showText && (
         <span className={`synq-brand-text ${dimensions.textClass}`}>
