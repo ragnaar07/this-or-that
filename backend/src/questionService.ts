@@ -1,6 +1,6 @@
 // ============================================================
 // THIS ⚡ THAT — High-Speed Question & Entertainment Analysis Engine (V6)
-// 10,000 Questions Dataset, Instant (<1ms) Processing, Rich Engagement
+// Curated Questions Dataset, Instant (<1ms) Processing, Rich Engagement
 // ============================================================
 
 import {

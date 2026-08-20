@@ -1,15 +1,16 @@
 // ============================================================
-// Comprehensive Test Suite — THIS ⚡ THAT V6 (11,361 Dataset & Ultra-Fast Engine)
+// Comprehensive Test Suite — THIS ⚡ THAT V6 (Dataset & Ultra-Fast Engine)
 // ============================================================
 
 import { generateQuestion, generateFinalReport, computeCategoryScores, computeAchievements, computePredictionScore, generateLiveReaction } from './questionService';
 import { getFallbackQuestion, getRoundTypeForRound, getRoundConfiguration, FALLBACK_QUESTIONS, isDuplicateQuestion, normalizeSignature, getTotalQuestionCount } from './fallbackQuestions';
 import { setRoom, getRoom, deleteRoom, setPlayerAnswer, getRoundAnswers, clearRoundAnswers } from './store';
 import { Room, RoundHistoryItem, Question } from './types';
+import questionsData from './dataset/questionsData.json';
 
 async function runTests() {
   console.log('⚡ ============================================================');
-  console.log('⚡ THIS ⚡ THAT — 11,361 QUESTIONS & HIGH-SPEED ENGINE AUDIT');
+  console.log('⚡ THIS ⚡ THAT — QUESTIONS & HIGH-SPEED ENGINE AUDIT');
   console.log('⚡ ============================================================\n');
 
   let passed = 0;
@@ -25,13 +26,14 @@ async function runTests() {
     }
   }
 
-  // --- Test 1: 11,361 Questions Dataset Size & Structure ---
+  // --- Test 1: Questions Dataset Size & Structure ---
   console.log('--- TEST 1: Dataset Size & Structure ---');
   const totalCount = getTotalQuestionCount();
-  assert(totalCount === 11361, `Dataset contains exactly 11,361 questions (Actual: ${totalCount})`);
-  assert(FALLBACK_QUESTIONS.length === 11361, `Fallback pool exposes all 11,361 questions`);
+  assert(totalCount === FALLBACK_QUESTIONS.length, `Dataset count matches fallback pool (Actual: ${totalCount})`);
+  assert(totalCount >= 1000, `Dataset contains a production-sized pool (Actual: ${totalCount})`);
   assert(FALLBACK_QUESTIONS[0].optionA === 'Pizza' && FALLBACK_QUESTIONS[0].optionB === 'Burgers', 'Question #1 is Pizza vs Burgers');
-  assert(FALLBACK_QUESTIONS[11360].optionA === 'India will be superpower by 2047' && FALLBACK_QUESTIONS[11360].optionB === 'Still developing', 'Question #11,361 is India will be superpower by 2047 vs Still developing');
+  const lastQuestion = FALLBACK_QUESTIONS[FALLBACK_QUESTIONS.length - 1];
+  assert(Boolean(lastQuestion?.optionA && lastQuestion?.optionB && lastQuestion?.category), 'Last question has complete option/category structure');
 
   // --- Test 2: Sub-millisecond Generation Speed Benchmark ---
   console.log('\n--- TEST 2: Performance Benchmark (<1ms per question) ---');
@@ -64,21 +66,24 @@ async function runTests() {
 
   // --- Test 4: Game Modes Filtering ---
   console.log('\n--- TEST 4: Game Modes Filtering ---');
-  const funCategories = new Set(['Entertainment, Art & Media', 'Food, Drink & Socializing', 'Lifestyle, Health & Household']);
-  const deepCategories = new Set(['Existential Philosophy', 'Faith, Religion & Cosmology', 'Money, Ambition & Future', 'Morality, Ethics & Dilemmas', 'Relationships & Emotional Dynamics']);
-  const debateCategories = new Set(['Money, Ambition & Future', 'Morality, Ethics & Dilemmas', 'Politics, Ideology & Social Views', 'Science, Technology & AI Ethics']);
+  const rawQuestions = questionsData as Array<{ category: string; gameModes?: string[] }>;
+  const categoriesForMode = (mode: string) =>
+    new Set(rawQuestions.filter(q => (q.gameModes || []).includes(mode)).map(q => q.category));
+  const classicCategories = categoriesForMode('CLASSIC');
+  const debateCategories = categoriesForMode('DEBATE');
+  const chaosCategories = categoriesForMode('CHAOS');
 
   const funQ = await generateQuestion([], [], 1, undefined, 'FUN');
-  assert(funCategories.has(funQ.category), `FUN mode returns a fun-category question (Got: "${funQ.category}" - ${funQ.optionA} vs ${funQ.optionB})`);
+  assert(classicCategories.has(funQ.category), `FUN alias returns a CLASSIC question (Got: "${funQ.category}" - ${funQ.optionA} vs ${funQ.optionB})`);
 
   const deepQ = await generateQuestion([], [], 1, undefined, 'DEEP');
-  assert(deepCategories.has(deepQ.category), `DEEP mode returns a deep-category question (Got: "${deepQ.category}" - ${deepQ.optionA} vs ${deepQ.optionB})`);
+  assert(debateCategories.has(deepQ.category), `DEEP alias returns a debate/deep question (Got: "${deepQ.category}" - ${deepQ.optionA} vs ${deepQ.optionB})`);
 
   const debateQ = await generateQuestion([], [], 1, undefined, 'DEBATE');
   assert(debateCategories.has(debateQ.category), `DEBATE mode returns a debate-category question (Got: "${debateQ.category}" - ${debateQ.optionA} vs ${debateQ.optionB})`);
 
   const chaosQ = await generateQuestion([], [], 1, undefined, 'CHAOS');
-  assert(chaosQ.category === 'Humor, Quirks & Edge Cases', `CHAOS mode returns humor/quirks dilemmas (Got: "${chaosQ.category}")`);
+  assert(chaosCategories.has(chaosQ.category), `CHAOS mode returns chaos-category question (Got: "${chaosQ.category}")`);
 
   // --- Test 5: Dynamic 20-Round Non-repeating Flow ---
   console.log('\n--- TEST 5: 20-Round Flow & Anti-Clustering ---');

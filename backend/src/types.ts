@@ -2,9 +2,9 @@
 // Game Types — shared between all server modules (V5 Format + Timer Upgrade)
 // ============================================================
 
-export type QuestionFormat = 'QUICK' | 'SITUATIONAL' | 'PREFERENCE' | 'LIFESTYLE' | 'FINANCIAL' | 'RELATIONAL' | 'PHILOSOPHICAL' | 'IDEOLOGICAL';
-export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'NORMAL' | 'FUN' | 'DEEP' | 'DEBATE';
-export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'WILDCARD' | 'FUN' | 'DEEP' | 'DEBATE';
+export type QuestionFormat = 'QUICK' | 'CLASSIC' | 'SITUATIONAL' | 'PREFERENCE' | 'LIFESTYLE' | 'FINANCIAL' | 'RELATIONAL' | 'PHILOSOPHICAL' | 'IDEOLOGICAL';
+export type QuestionType = 'QUICK' | 'STANDARD' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'NORMAL' | 'FUN' | 'DEEP' | 'DEBATE' | 'PERSONAL' | 'DILEMMA';
+export type RoundType = 'NORMAL' | 'STANDARD' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'WILDCARD' | 'FUN' | 'DEEP' | 'DEBATE';
 
 export interface Question {
   id?: string;

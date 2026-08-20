@@ -53,12 +53,12 @@ export function About({ onBack, onOpenHowToPlay }: AboutProps) {
 
         {/* Feature Grid / Cards */}
         <div className="about-cards-list">
-          {/* Card 1: 10,000 Questions */}
+          {/* Card 1: Question Dataset */}
           <div className="about-feature-card">
-            <div className="about-card-badge badge--violet">⚡ 10,000+ FRESH DILEMMAS</div>
+            <div className="about-card-badge badge--violet">⚡ 1,300+ FRESH DILEMMAS</div>
             <h2 className="about-card-heading">Zero Repetition, Pure Relatability</h2>
             <p className="about-card-text">
-              From late-night Maggi vs Swiggy cravings, to ₹10 Crore dilemmas, Goa trip chaos, and career decisions — our curated database of 10,000+ questions ensures every match feels completely fresh.
+              From late-night Maggi vs Swiggy cravings, to ₹10 Crore dilemmas, Goa trip chaos, and career decisions — our curated database of 1,300+ questions keeps every match feeling fresh.
             </p>
             <div className="about-pill-row">
               <span className="about-sub-pill">Food & Lifestyle</span>

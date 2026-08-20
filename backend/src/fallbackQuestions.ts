@@ -1,6 +1,6 @@
 // ============================================================
 // Fallback & Dataset Bridge (V6)
-// Connected to the 10,000 Questions Dataset Engine
+// Connected to the Questions Dataset Engine
 // ============================================================
 
 import { Question, RoundType, QuestionFormat, QuestionType } from './types';

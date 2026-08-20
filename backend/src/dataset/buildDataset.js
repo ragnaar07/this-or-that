@@ -4,7 +4,7 @@ const path = require('path');
 const inputPath = 'C:\\Users\\Lenovo\\.gemini\\antigravity-ide\\brain\\25282f35-0b3f-48ab-b986-d4e7a464822d\\.user_uploaded\\media_1786879130635.json';
 const outputPath = path.join(__dirname, 'questionsData.json');
 
-console.log('Loading 10,000 questions from:', inputPath);
+console.log('Loading questions from:', inputPath);
 const rawItems = JSON.parse(fs.readFileSync(inputPath, 'utf-8'));
 console.log(`Loaded ${rawItems.length} items from source.`);
 

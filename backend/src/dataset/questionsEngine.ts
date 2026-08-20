@@ -1,5 +1,5 @@
 // ============================================================
-// Ultra-Fast 10,000 Questions In-Memory Engine (O(1) Instant Retrieval)
+// Ultra-Fast Questions In-Memory Engine (O(1) Instant Retrieval)
 // Pre-indexed for Sub-Millisecond (<0.01ms) Performance
 // ============================================================
 
@@ -636,6 +636,18 @@ const MODE_ROUND_POOLS = new Map<string, RawDatasetQuestion[]>();
 const MODE_TYPE_POOLS = new Map<string, RawDatasetQuestion[]>();
 const MODE_ALL_POOLS = new Map<string, RawDatasetQuestion[]>();
 
+const MODE_ALIASES: Record<string, string[]> = {
+  INDIA: ['RANDOM'],
+  FUN: ['CLASSIC', 'RANDOM'],
+  ENTERTAINMENT: ['CLASSIC', 'RANDOM'],
+  FOOD: ['CLASSIC', 'RANDOM'],
+  DEEP: ['DEBATE', 'RANDOM'],
+  STANDARD: ['CLASSIC', 'RANDOM'],
+};
+
+const DEFAULT_MODE_SEEDS = ['RANDOM', 'CLASSIC', 'INDIA', 'ENTERTAINMENT', 'FOOD', 'CHAOS', 'DEEP', 'DEBATE'];
+const RANDOM_SAMPLE_SIZE = 24;
+
 // Initialize indexes once on server boot
 (() => {
   for (const q of ALL_QUESTIONS) {
@@ -681,25 +693,53 @@ const MODE_ALL_POOLS = new Map<string, RawDatasetQuestion[]>();
     }
   }
 
-  // Pre-seed CHAOS, PREDICTION, DOUBLE_POINTS, and DEEP_PSYCHOLOGY for all modes
+  // Pre-seed CHAOS, PREDICTION, DOUBLE_POINTS, and DEEP_PSYCHOLOGY for all known modes.
   const allChaos = ALL_QUESTIONS.filter(q => q.category === 'Crazy & Superpowers' || q.type === 'CHAOS' || q.roundType === 'CHAOS');
   const allPrediction = [
     ...RAW_PREDICTION_QUESTIONS,
-    ...ALL_QUESTIONS.filter(q => q.category === 'Friendship & Relationships' || q.category === 'Digital & Memes' || q.type === 'EDGE' || q.type === 'FUNNY')
+    ...ALL_QUESTIONS.filter(q =>
+      q.category === 'Friendship & Relationships' ||
+      q.category.includes('Relationships') ||
+      q.category.includes('Communication') ||
+      q.category.includes('Emotional') ||
+      q.category.includes('Boundaries') ||
+      q.type === 'EDGE' ||
+      q.type === 'FUNNY'
+    )
   ];
-  const allDoublePoints = ALL_QUESTIONS.filter(q => q.category === 'Money & Career' || q.category === 'Deep & Philosophy' || q.type === 'EDGE');
+  const allDoublePoints = ALL_QUESTIONS.filter(q =>
+    q.category === 'Money & Career' ||
+    q.category.includes('Money') ||
+    q.category.includes('Financial') ||
+    q.category.includes('Career') ||
+    q.category.includes('Risk') ||
+    q.category.includes('Philosophy') ||
+    q.type === 'EDGE' ||
+    q.type === 'DEBATE'
+  );
   const allDeepPsychology = [
     ...RAW_DEEP_PSYCHOLOGY_QUESTIONS,
-    ...ALL_QUESTIONS.filter(q => q.category === 'Deep & Philosophy' || q.category === 'Friendship & Relationships' || q.type === 'EDGE')
+    ...ALL_QUESTIONS.filter(q =>
+      q.category === 'Deep & Philosophy' ||
+      q.category === 'Friendship & Relationships' ||
+      q.category.includes('Philosophy') ||
+      q.category.includes('Morality') ||
+      q.category.includes('Relationships') ||
+      q.type === 'EDGE' ||
+      q.type === 'DEEP' ||
+      q.type === 'DILEMMA'
+    )
   ];
 
-  for (const m of ['RANDOM', 'INDIA', 'ENTERTAINMENT', 'FOOD', 'CHAOS', 'DEEP']) {
-    MODE_ROUND_POOLS.set(`${m}___CHAOS`, allChaos);
-    MODE_ROUND_POOLS.set(`${m}___PREDICTION`, allPrediction);
-    MODE_ROUND_POOLS.set(`${m}___DOUBLE_POINTS`, allDoublePoints);
-    MODE_ROUND_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
-    MODE_TYPE_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
-    MODE_TYPE_POOLS.set(`${m}___PREDICTION`, allPrediction);
+  for (const m of DEFAULT_MODE_SEEDS) {
+    if (allChaos.length > 0) MODE_ROUND_POOLS.set(`${m}___CHAOS`, allChaos);
+    if (allPrediction.length > 0) MODE_ROUND_POOLS.set(`${m}___PREDICTION`, allPrediction);
+    if (allDoublePoints.length > 0) MODE_ROUND_POOLS.set(`${m}___DOUBLE_POINTS`, allDoublePoints);
+    if (allDeepPsychology.length > 0) {
+      MODE_ROUND_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
+      MODE_TYPE_POOLS.set(`${m}___DEEP_PSYCHOLOGY`, allDeepPsychology);
+    }
+    if (allPrediction.length > 0) MODE_TYPE_POOLS.set(`${m}___PREDICTION`, allPrediction);
   }
 
   console.log(`⚡ [QUESTIONS ENGINE] Pre-indexed ${ALL_QUESTIONS.length + RAW_DEEP_PSYCHOLOGY_QUESTIONS.length + RAW_PREDICTION_QUESTIONS.length} questions into fast pools.`);
@@ -763,8 +803,79 @@ export function getRoundTypeForRound(roundNumber: number, deepPsychology = true)
   return getRoundConfiguration(roundNumber, deepPsychology).roundType;
 }
 
-// Global fast rotation pointer
-let cursor = Math.floor(Math.random() * 5000);
+function randomIndex(length: number): number {
+  return length <= 1 ? 0 : Math.floor(Math.random() * length);
+}
+
+function getCandidateModes(gameMode: string): string[] {
+  const requestedMode = (gameMode || 'RANDOM').toUpperCase();
+  return Array.from(new Set([requestedMode, ...(MODE_ALIASES[requestedMode] || []), 'RANDOM']));
+}
+
+function getPoolByMode(poolMap: Map<string, RawDatasetQuestion[]>, modes: string[], suffix?: string): RawDatasetQuestion[] | undefined {
+  for (const mode of modes) {
+    const key = suffix ? `${mode}___${suffix}` : mode;
+    const pool = poolMap.get(key);
+    if (pool && pool.length > 0) return pool;
+  }
+  return undefined;
+}
+
+function hasRecentQuestion(item: RawDatasetQuestion, recentSigSet: Set<string>): boolean {
+  const sig = normalizeSignature(item.optionA, item.optionB);
+  const sigA = normalizeSignature(item.optionA, '');
+  const sigB = normalizeSignature(item.optionB, '');
+  return recentSigSet.has(sig) || recentSigSet.has(sigA) || recentSigSet.has(sigB);
+}
+
+function selectRandomQuestion(
+  pool: RawDatasetQuestion[] | undefined,
+  recentSigSet: Set<string>,
+  recentCategories: string[],
+  forbiddenCat: string | null
+): RawDatasetQuestion | null {
+  if (!pool || pool.length === 0) return null;
+
+  const sampleSize = Math.min(pool.length, RANDOM_SAMPLE_SIZE);
+  const sampledIndexes = new Set<number>();
+  const candidates: RawDatasetQuestion[] = [];
+
+  while (sampledIndexes.size < sampleSize) {
+    const index = randomIndex(pool.length);
+    if (sampledIndexes.has(index)) continue;
+    sampledIndexes.add(index);
+
+    const item = pool[index];
+    if (forbiddenCat && item.category === forbiddenCat) continue;
+    if (hasRecentQuestion(item, recentSigSet)) continue;
+    candidates.push(item);
+  }
+
+  const fallbackCandidates = candidates.length > 0
+    ? candidates
+    : pool.filter(item => !hasRecentQuestion(item, recentSigSet));
+
+  if (fallbackCandidates.length === 0) return pool[randomIndex(pool.length)];
+
+  const recentCategoryCounts = new Map<string, number>();
+  for (const category of recentCategories.slice(-5)) {
+    recentCategoryCounts.set(category, (recentCategoryCounts.get(category) || 0) + 1);
+  }
+
+  const weighted = fallbackCandidates.map(item => ({
+    item,
+    weight: 1 / Math.pow(1 + (recentCategoryCounts.get(item.category) || 0), 2),
+  }));
+  const totalWeight = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+  let threshold = Math.random() * totalWeight;
+
+  for (const entry of weighted) {
+    threshold -= entry.weight;
+    if (threshold <= 0) return entry.item;
+  }
+
+  return weighted[weighted.length - 1].item;
+}
 
 export function getInstantQuestion(
   recentQuestions: string[] = [],
@@ -791,63 +902,52 @@ export function getInstantQuestion(
   const lastCat2 = recentCategories[recentCategories.length - 2];
   const forbiddenCat = lastCat1 && lastCat2 && lastCat1 === lastCat2 ? lastCat1 : null;
 
-  const mode = (gameMode || 'RANDOM').toUpperCase();
+  const candidateModes = getCandidateModes(gameMode);
 
   // Mode pool check
-  const modePool = MODE_ALL_POOLS.get(mode) || ALL_QUESTIONS;
+  const modePool = getPoolByMode(MODE_ALL_POOLS, candidateModes) || ALL_QUESTIONS;
 
   // 1. Specific Round Type Pool (CHAOS, PREDICTION, DOUBLE_POINTS)
   if (actualRoundType !== 'NORMAL') {
-    const rtPool = MODE_ROUND_POOLS.get(`${mode}___${actualRoundType}`) || MODE_ROUND_POOLS.get(`RANDOM___${actualRoundType}`);
-    if (rtPool && rtPool.length > 0) {
-      for (let i = 0; i < Math.min(25, rtPool.length); i++) {
-        const item = rtPool[(cursor + i) % rtPool.length];
-        if ((!forbiddenCat || item.category !== forbiddenCat) && !recentSigSet.has(normalizeSignature(item.optionA, ''))) {
-          cursor = (cursor + i + 1) % rtPool.length;
-          return formatOutputQuestion(item, targetFormat, (actualRoundType as QuestionType), timeLimit, actualRoundType);
-        }
-      }
+    const item = selectRandomQuestion(
+      getPoolByMode(MODE_ROUND_POOLS, candidateModes, actualRoundType),
+      recentSigSet,
+      recentCategories,
+      forbiddenCat
+    );
+    if (item) {
+      return formatOutputQuestion(item, targetFormat, (actualRoundType as QuestionType), timeLimit, actualRoundType);
     }
   }
 
   // 2. Specific Type Pool (EDGE, FUNNY)
   if (targetType === 'EDGE' || targetType === 'FUNNY') {
-    const typePool = MODE_TYPE_POOLS.get(`${mode}___${targetType}`) || MODE_TYPE_POOLS.get(`RANDOM___${targetType}`);
-    if (typePool && typePool.length > 0) {
-      for (let i = 0; i < Math.min(25, typePool.length); i++) {
-        const item = typePool[(cursor + i) % typePool.length];
-        if ((!forbiddenCat || item.category !== forbiddenCat) && !recentSigSet.has(normalizeSignature(item.optionA, ''))) {
-          cursor = (cursor + i + 1) % typePool.length;
-          return formatOutputQuestion(item, item.format || targetFormat, targetType, item.timeLimit || timeLimit, actualRoundType);
-        }
-      }
+    const item = selectRandomQuestion(
+      getPoolByMode(MODE_TYPE_POOLS, candidateModes, targetType),
+      recentSigSet,
+      recentCategories,
+      forbiddenCat
+    );
+    if (item) {
+      return formatOutputQuestion(item, item.format || targetFormat, targetType, item.timeLimit || timeLimit, actualRoundType);
     }
   }
 
   // 3. Format Pool within Mode (QUICK vs SITUATIONAL)
-  const fmtPool = MODE_FORMAT_POOLS.get(`${mode}___${targetFormat}`) || (mode === 'RANDOM' ? MODE_FORMAT_POOLS.get(`RANDOM___${targetFormat}`) : modePool);
-  if (fmtPool && fmtPool.length > 0) {
-    for (let i = 0; i < Math.min(25, fmtPool.length); i++) {
-      const item = fmtPool[(cursor + i) % fmtPool.length];
-      if ((!forbiddenCat || item.category !== forbiddenCat) && !recentSigSet.has(normalizeSignature(item.optionA, ''))) {
-        cursor = (cursor + i + 1) % fmtPool.length;
-        return formatOutputQuestion(item, targetFormat, targetType, timeLimit, actualRoundType);
-      }
-    }
+  const fmtPool = getPoolByMode(MODE_FORMAT_POOLS, candidateModes, targetFormat) || modePool;
+  const formatItem = selectRandomQuestion(fmtPool, recentSigSet, recentCategories, forbiddenCat);
+  if (formatItem) {
+    return formatOutputQuestion(formatItem, targetFormat, targetType, timeLimit, actualRoundType);
   }
 
   // 4. Any item from Mode Pool
-  for (let i = 0; i < Math.min(25, modePool.length); i++) {
-    const item = modePool[(cursor + i) % modePool.length];
-    if (!recentSigSet.has(normalizeSignature(item.optionA, ''))) {
-      cursor = (cursor + i + 1) % modePool.length;
-      return formatOutputQuestion(item, targetFormat, targetType, timeLimit, actualRoundType);
-    }
+  const modeItem = selectRandomQuestion(modePool, recentSigSet, recentCategories, null);
+  if (modeItem) {
+    return formatOutputQuestion(modeItem, targetFormat, targetType, timeLimit, actualRoundType);
   }
 
   // 5. Ultimate Fallback
-  const fallback = ALL_QUESTIONS[cursor % ALL_QUESTIONS.length];
-  cursor = (cursor + 1) % ALL_QUESTIONS.length;
+  const fallback = ALL_QUESTIONS[randomIndex(ALL_QUESTIONS.length)];
   return formatOutputQuestion(fallback, targetFormat, targetType, timeLimit, actualRoundType);
 }
 

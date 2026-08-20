@@ -16,7 +16,7 @@ Two friends join the same room on their phones. Both receive the exact same pair
 * **Full-Screen Emotional Reveals:**
   * 🟩 **MATCH!** (Mint Green flash)
   * 🟥 **NO MATCH** (Red flash)
-* **10,000 Questions In-Memory Engine:** Pre-indexed offline dataset with sub-millisecond (<1ms) response times. Zero API lag, zero rate limits, and zero external costs.
+* **1,300+ Questions In-Memory Engine:** Pre-indexed offline dataset with sub-millisecond (<1ms) response times. Zero API lag, zero rate limits, and zero external costs.
 * **Smart Category & Game Mode System:** Food & Chai, Bollywood & Cinema, Cricket & Sports, Indian Everyday Life, Deep Dilemmas, Chaos & Superpowers, Money & Career, Friendship & Relationships, Digital & Memes.
 * **Dynamic Round Formats:** Fast Instinct (10s Quick rounds) and Deep Dilemmas (16s Situational, Chaos, Prediction & Double Points rounds).
 * **Instant Psychological & Roast Reports:** Comprehensive post-game compatibility analysis with Nice, Fun, and Brutal Roast tones.
@@ -36,7 +36,7 @@ Two friends join the same room on their phones. Both receive the exact same pair
                                  │
                      ┌───────────┴───────────┐
                      ▼                       ▼
-            [ In-Memory Store ]     [ 10,000 Questions Engine ]
+            [ In-Memory Store ]     [ Questions Engine ]
             (Rooms & Answers)       (Pre-Indexed Fast Dataset)
 ```
 
