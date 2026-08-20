@@ -1,5 +1,5 @@
 // ============================================================
-// Comprehensive Test Suite — THIS ⚡ THAT V6 (10,000 Dataset & Ultra-Fast Engine)
+// Comprehensive Test Suite — THIS ⚡ THAT V6 (11,361 Dataset & Ultra-Fast Engine)
 // ============================================================
 
 import { generateQuestion, generateFinalReport, computeCategoryScores, computeAchievements, computePredictionScore, generateLiveReaction } from './questionService';
@@ -9,7 +9,7 @@ import { Room, RoundHistoryItem, Question } from './types';
 
 async function runTests() {
   console.log('⚡ ============================================================');
-  console.log('⚡ THIS ⚡ THAT — 10,000 QUESTIONS & HIGH-SPEED ENGINE AUDIT');
+  console.log('⚡ THIS ⚡ THAT — 11,361 QUESTIONS & HIGH-SPEED ENGINE AUDIT');
   console.log('⚡ ============================================================\n');
 
   let passed = 0;
@@ -25,13 +25,13 @@ async function runTests() {
     }
   }
 
-  // --- Test 1: 10,000 Questions Dataset Size & Structure ---
+  // --- Test 1: 11,361 Questions Dataset Size & Structure ---
   console.log('--- TEST 1: Dataset Size & Structure ---');
   const totalCount = getTotalQuestionCount();
-  assert(totalCount === 10000, `Dataset contains exactly 10,000 questions (Actual: ${totalCount})`);
-  assert(FALLBACK_QUESTIONS.length === 10000, `Fallback pool exposes all 10,000 questions`);
+  assert(totalCount === 11361, `Dataset contains exactly 11,361 questions (Actual: ${totalCount})`);
+  assert(FALLBACK_QUESTIONS.length === 11361, `Fallback pool exposes all 11,361 questions`);
   assert(FALLBACK_QUESTIONS[0].optionA === 'Pizza' && FALLBACK_QUESTIONS[0].optionB === 'Burgers', 'Question #1 is Pizza vs Burgers');
-  assert(FALLBACK_QUESTIONS[9999].optionA === 'Tarot cards' && FALLBACK_QUESTIONS[9999].optionB === 'An unknown creature', 'Question #10,000 is Tarot cards vs An unknown creature');
+  assert(FALLBACK_QUESTIONS[11360].optionA === 'India will be superpower by 2047' && FALLBACK_QUESTIONS[11360].optionB === 'Still developing', 'Question #11,361 is India will be superpower by 2047 vs Still developing');
 
   // --- Test 2: Sub-millisecond Generation Speed Benchmark ---
   console.log('\n--- TEST 2: Performance Benchmark (<1ms per question) ---');
@@ -64,14 +64,21 @@ async function runTests() {
 
   // --- Test 4: Game Modes Filtering ---
   console.log('\n--- TEST 4: Game Modes Filtering ---');
-  const foodQ = await generateQuestion([], [], 1, undefined, 'FOOD');
-  assert(foodQ.category === 'Food & Chai', `FOOD mode returns Food & Chai question (Got: "${foodQ.category}" - ${foodQ.optionA} vs ${foodQ.optionB})`);
+  const funCategories = new Set(['Entertainment, Art & Media', 'Food, Drink & Socializing', 'Lifestyle, Health & Household']);
+  const deepCategories = new Set(['Existential Philosophy', 'Faith, Religion & Cosmology', 'Money, Ambition & Future', 'Morality, Ethics & Dilemmas', 'Relationships & Emotional Dynamics']);
+  const debateCategories = new Set(['Money, Ambition & Future', 'Morality, Ethics & Dilemmas', 'Politics, Ideology & Social Views', 'Science, Technology & AI Ethics']);
 
-  const entQ = await generateQuestion([], [], 1, undefined, 'ENTERTAINMENT');
-  assert(entQ.category === 'Bollywood & Cinema' || entQ.category === 'Cricket & Sports' || entQ.category === 'Digital & Memes', `ENTERTAINMENT mode returns cinema/sports/pop culture (Got: "${entQ.category}" - ${entQ.optionA} vs ${entQ.optionB})`);
+  const funQ = await generateQuestion([], [], 1, undefined, 'FUN');
+  assert(funCategories.has(funQ.category), `FUN mode returns a fun-category question (Got: "${funQ.category}" - ${funQ.optionA} vs ${funQ.optionB})`);
+
+  const deepQ = await generateQuestion([], [], 1, undefined, 'DEEP');
+  assert(deepCategories.has(deepQ.category), `DEEP mode returns a deep-category question (Got: "${deepQ.category}" - ${deepQ.optionA} vs ${deepQ.optionB})`);
+
+  const debateQ = await generateQuestion([], [], 1, undefined, 'DEBATE');
+  assert(debateCategories.has(debateQ.category), `DEBATE mode returns a debate-category question (Got: "${debateQ.category}" - ${debateQ.optionA} vs ${debateQ.optionB})`);
 
   const chaosQ = await generateQuestion([], [], 1, undefined, 'CHAOS');
-  assert(chaosQ.category === 'Crazy & Superpowers' || chaosQ.type === 'CHAOS', `CHAOS mode returns superpowers/spooky/wild dilemmas (Got: "${chaosQ.category}")`);
+  assert(chaosQ.category === 'Humor, Quirks & Edge Cases', `CHAOS mode returns humor/quirks dilemmas (Got: "${chaosQ.category}")`);
 
   // --- Test 5: Dynamic 20-Round Non-repeating Flow ---
   console.log('\n--- TEST 5: 20-Round Flow & Anti-Clustering ---');

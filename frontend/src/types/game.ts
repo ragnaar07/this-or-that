@@ -2,9 +2,9 @@
 // Client-side game types — mirrors server V5 types
 // ============================================================
 
-export type QuestionFormat = 'QUICK' | 'SITUATIONAL';
-export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'NORMAL';
-export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'WILDCARD';
+export type QuestionFormat = 'QUICK' | 'SITUATIONAL' | 'PREFERENCE' | 'LIFESTYLE' | 'FINANCIAL' | 'RELATIONAL' | 'PHILOSOPHICAL' | 'IDEOLOGICAL';
+export type QuestionType = 'QUICK' | 'SITUATIONAL' | 'EDGE' | 'FUNNY' | 'CHAOS' | 'PREDICTION' | 'CURRENT' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'NORMAL' | 'FUN' | 'DEEP' | 'DEBATE';
+export type RoundType = 'NORMAL' | 'CHAOS' | 'PREDICTION' | 'DOUBLE_POINTS' | 'DEEP_PSYCHOLOGY' | 'WILDCARD' | 'FUN' | 'DEEP' | 'DEBATE';
 export type Gender = 'male' | 'female' | 'other';
 
 export interface Question {
