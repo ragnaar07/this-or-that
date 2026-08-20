@@ -19558,5 +19558,50 @@
       "DEBATE",
       "RANDOM"
     ]
+  },
+  {
+    "id": "q_11403",
+    "rawId": 11403,
+    "optionA": "Virat Kohli is the greatest of his era",
+    "optionB": "He's genuinely overrated",
+    "category": "Fitness, Sports & Outdoors",
+    "format": "CLASSIC",
+    "type": "STANDARD",
+    "timeLimit": 10,
+    "roundType": "STANDARD",
+    "gameModes": [
+      "CLASSIC",
+      "RANDOM"
+    ]
+  },
+  {
+    "id": "q_11404",
+    "rawId": 11404,
+    "optionA": "Dhoni was a god-level leader",
+    "optionB": "He was just a very good captain",
+    "category": "Fitness, Sports & Outdoors",
+    "format": "CLASSIC",
+    "type": "STANDARD",
+    "timeLimit": 10,
+    "roundType": "STANDARD",
+    "gameModes": [
+      "CLASSIC",
+      "RANDOM"
+    ]
+  },
+  {
+    "id": "q_11405",
+    "rawId": 11405,
+    "optionA": "Rohit Sharma is a better captain than Virat",
+    "optionB": "Virat remains the better captain",
+    "category": "Fitness, Sports & Outdoors",
+    "format": "CLASSIC",
+    "type": "STANDARD",
+    "timeLimit": 10,
+    "roundType": "STANDARD",
+    "gameModes": [
+      "CLASSIC",
+      "RANDOM"
+    ]
   }
 ]
