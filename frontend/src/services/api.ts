@@ -6,6 +6,7 @@ import type { RoomState, PlayerRole } from '../types/game';
 import { API_BASE_URL } from '../config/api';
 
 const BASE_URL = API_BASE_URL;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 export function getClientSessionId(): string {
   try {
@@ -23,6 +24,8 @@ export function getClientSessionId(): string {
 interface ApiResponse<T = unknown> {
   success?: boolean;
   error?: string;
+  status?: number;
+  statusText?: string;
   room?: RoomState;
   playerId?: string;
   sessionId?: string;
@@ -31,22 +34,90 @@ interface ApiResponse<T = unknown> {
   completedResult?: unknown;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+async function readResponseBody(res: Response): Promise<unknown> {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json') || contentType.includes('+json')) {
+    return res.json();
+  }
+
+  const text = await res.text();
+  return text.trim().length > 0 ? text : null;
+}
+
+function getErrorMessage(body: unknown, fallback: string): string {
+  if (isRecord(body) && typeof body.error === 'string' && body.error.trim().length > 0) {
+    return body.error;
+  }
+  if (typeof body === 'string' && body.trim().length > 0) {
+    return body;
+  }
+  return fallback;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options,
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      return { error: data.error ?? 'Something went wrong. Try again.', room: data.room };
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const abortFromCaller = () => controller.abort();
+
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', abortFromCaller, { once: true });
     }
-    return data;
-  } catch {
-    return { error: 'Cannot connect to server. Check your connection.' };
+  }
+
+  try {
+    const { headers, signal: _signal, ...fetchOptions } = options;
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...fetchOptions,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      signal: controller.signal,
+    });
+    const data = await readResponseBody(res);
+    if (!res.ok) {
+      return {
+        error: getErrorMessage(data, res.statusText || 'Something went wrong. Try again.'),
+        status: res.status,
+        statusText: res.statusText,
+        room: isRecord(data) ? (data.room as RoomState | undefined) : undefined,
+      };
+    }
+    if (isRecord(data)) {
+      return {
+        ...(data as ApiResponse<T>),
+        status: res.status,
+        statusText: res.statusText,
+      };
+    }
+    return {
+      success: true,
+      status: res.status,
+      statusText: res.statusText,
+      data: data as T,
+    };
+  } catch (err) {
+    const isAbort = err instanceof Error && err.name === 'AbortError';
+    return {
+      error: isAbort
+        ? 'Request timed out. Please try again.'
+        : 'Cannot connect to server. Check your connection.',
+      status: 0,
+      statusText: isAbort ? 'Timeout' : 'Network Error',
+    };
+  } finally {
+    window.clearTimeout(timeoutId);
+    options.signal?.removeEventListener('abort', abortFromCaller);
   }
 }
 
@@ -123,32 +194,37 @@ export const api = {
     role: PlayerRole,
     roundNumber: number,
     choice: string,
-    prediction?: string
+    prediction?: string,
+    sessionId?: string
   ) {
+    const sid = sessionId || getClientSessionId();
     return request(`/api/rooms/${code}/answer`, {
       method: 'POST',
-      body: JSON.stringify({ playerId, role, roundNumber, choice, prediction }),
+      body: JSON.stringify({ playerId, role, roundNumber, choice, prediction, sessionId: sid }),
     });
   },
 
-  async nextRound(code: string, playerId: string) {
+  async nextRound(code: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
     return request(`/api/rooms/${code}/next-round`, {
       method: 'POST',
-      body: JSON.stringify({ playerId }),
+      body: JSON.stringify({ playerId, sessionId: sid }),
     });
   },
 
-  async restartRoom(code: string, playerId: string) {
+  async restartRoom(code: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
     return request(`/api/rooms/${code}/restart`, {
       method: 'POST',
-      body: JSON.stringify({ playerId }),
+      body: JSON.stringify({ playerId, sessionId: sid }),
     });
   },
 
-  async leaveRoom(code: string, playerId: string) {
+  async leaveRoom(code: string, playerId: string, sessionId?: string) {
+    const sid = sessionId || getClientSessionId();
     return request(`/api/rooms/${code}/leave`, {
       method: 'DELETE',
-      body: JSON.stringify({ playerId }),
+      body: JSON.stringify({ playerId, sessionId: sid }),
     });
   },
 
@@ -162,5 +238,3 @@ export const api = {
     });
   },
 };
-
-

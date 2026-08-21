@@ -110,6 +110,7 @@ async function runPresenceTestSuite() {
 
   // --- TEST 3: Player Presence Registration & Heartbeat ---
   console.log('\n--- TEST 3: Player Presence Registration & Heartbeat ---');
+  dummyRoom.hostSessionId = 'session_h1';
   const hostPres = registerPlayerPresence(testRoomCode, 'host_p1', 'session_h1', 'Host Player', 'host', hash1);
   assert(hostPres.status === 'CONNECTED', 'Presence registers with CONNECTED status');
   assert(hostPres.sessionId === 'session_h1', 'Presence records sessionId correctly');
@@ -118,6 +119,7 @@ async function runPresenceTestSuite() {
   dummyRoom.guestPlayerId = 'guest_p2';
   dummyRoom.guestPlayerName = 'Guest Player';
   dummyRoom.guestIpHash = hashOther;
+  dummyRoom.guestSessionId = 'session_g1';
   dummyRoom.status = 'PLAYING';
   dummyRoom.roundNumber = 1;
   setRoom(dummyRoom);

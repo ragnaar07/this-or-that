@@ -20,9 +20,14 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const [room, setRoom] = useState<RoomState>(initialRoom);
   const [myChoice, setMyChoice] = useState<string | null>(null);
   const [myPrediction, setMyPrediction] = useState<string | null>(null);
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [answerSubmitError, setAnswerSubmitError] = useState<string | null>(null);
+  const [pollingConflictError, setPollingConflictError] = useState<string | null>(null);
   const [lastRoundNumber, setLastRoundNumber] = useState(initialRoom.roundNumber);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [autoAdvanceAttempt, setAutoAdvanceAttempt] = useState(0);
+  const [autoAdvanceNotice, setAutoAdvanceNotice] = useState<string | null>(null);
   const [showRevealOverlay, setShowRevealOverlay] = useState(initialRoom.status === 'REVEALING');
   const [showMindReadSplash, setShowMindReadSplash] = useState(false);
   const [mindReadSplashSeenForRound, setMindReadSplashSeenForRound] = useState<number | null>(null);
@@ -31,6 +36,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
 
   // Track if we already requested next-round (host-only, prevent duplicate calls)
   const nextRoundRequested = useRef(false);
+  const answerSubmitInFlight = useRef(false);
 
   const opponentName = session.role === 'host'
     ? (room.guestPlayerName || 'Opponent')
@@ -40,6 +46,19 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const isChaosRound = room.currentRoundType === 'CHAOS';
   const isDoublePointsRound = room.currentRoundType === 'DOUBLE_POINTS';
   const isDeepPsychologyRound = room.currentRoundType === 'DEEP_PSYCHOLOGY' || room.currentQuestion?.type === 'DEEP_PSYCHOLOGY';
+
+  const applyRoomUpdate = useCallback((nextRoom: RoomState) => {
+    setRoom((prev) => {
+      if (!prev) return nextRoom;
+      const prevVer = prev.stateVersion || 0;
+      const newVer = nextRoom.stateVersion || 0;
+      // Apply only if newer version or timestamp, preventing older out-of-order responses.
+      if (newVer > prevVer || (newVer === prevVer && nextRoom.updatedAt >= prev.updatedAt)) {
+        return nextRoom;
+      }
+      return prev;
+    });
+  }, []);
 
   // Intercept browser / Android back button to show leave confirmation modal
   useEffect(() => {
@@ -57,7 +76,12 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   // Fast disconnect beacon on tab close / reload
   useEffect(() => {
     function handlePageHide() {
-      if (room.status === 'PLAYING' || room.status === 'REVEALING' || room.status === 'PLAYER_DISCONNECTED') {
+      if (
+        room.status === 'PLAYING' ||
+        room.status === 'REVEALING' ||
+        room.status === 'GENERATING_REPORT' ||
+        room.status === 'PLAYER_DISCONNECTED'
+      ) {
         api.sendDisconnectBeacon(session.roomCode, session.playerId, session.sessionId);
       }
     }
@@ -69,26 +93,6 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       window.removeEventListener('pagehide', handlePageHide);
       window.removeEventListener('beforeunload', handlePageHide);
     };
-  }, [session.roomCode, session.playerId, session.sessionId, room.status]);
-
-  // Periodic Heartbeat every 6 seconds
-  useEffect(() => {
-    if (
-      room.status === 'FINISHED' ||
-      room.status === 'COMPLETED' ||
-      room.status === 'INTERRUPTED' ||
-      room.status === 'ABANDONED'
-    ) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        await api.heartbeat(session.roomCode, session.playerId, session.sessionId);
-      } catch {}
-    }, 6000);
-
-    return () => clearInterval(interval);
   }, [session.roomCode, session.playerId, session.sessionId, room.status]);
 
   // Check for game completion / interruption -> Route directly to Result screen
@@ -109,8 +113,14 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     setRoom(initialRoom);
     setMyChoice(null);
     setMyPrediction(null);
+    setIsSubmittingAnswer(false);
+    setAnswerSubmitError(null);
+    setPollingConflictError(null);
     setLastRoundNumber(initialRoom.roundNumber);
     nextRoundRequested.current = false;
+    answerSubmitInFlight.current = false;
+    setAutoAdvanceAttempt(0);
+    setAutoAdvanceNotice(null);
   }, [initialRoom.code, initialRoom.stateVersion]);
 
   // Reset choices when round changes
@@ -119,9 +129,14 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       console.log(`[GAME] Round changed from ${lastRoundNumber} to ${room.roundNumber} (${room.currentRoundType})`);
       setMyChoice(null);
       setMyPrediction(null);
+      setIsSubmittingAnswer(false);
+      setAnswerSubmitError(null);
       setShowRevealOverlay(false);
       setLastRoundNumber(room.roundNumber);
       nextRoundRequested.current = false;
+      answerSubmitInFlight.current = false;
+      setAutoAdvanceAttempt(0);
+      setAutoAdvanceNotice(null);
     }
   }, [room.roundNumber, room.currentRoundType, lastRoundNumber]);
 
@@ -174,27 +189,30 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     if (isLeaving) return;
     try {
       const res = await api.pollRoom(session.roomCode, session.playerId, session.sessionId);
+      if (res.error) {
+        if (res.status === 409) {
+          setPollingConflictError(res.error);
+        }
+        if (res.room) {
+          applyRoomUpdate(res.room);
+        }
+        return;
+      }
+
+      setPollingConflictError(null);
       if (res.room) {
-        setRoom((prev) => {
-          if (!prev) return res.room!;
-          const prevVer = prev.stateVersion || 0;
-          const newVer = res.room!.stateVersion || 0;
-          // Apply only if newer version or timestamp, preventing older out-of-order responses
-          if (newVer > prevVer || (newVer === prevVer && res.room!.updatedAt >= prev.updatedAt)) {
-            return res.room!;
-          }
-          return prev;
-        });
+        applyRoomUpdate(res.room);
       }
     } catch (err) {
       console.warn('[GAME] Poll error:', err);
     }
-  }, [session.roomCode, session.playerId, session.sessionId, isLeaving]);
+  }, [session.roomCode, session.playerId, session.sessionId, isLeaving, applyRoomUpdate]);
 
   usePolling(
     pollRoom,
     700,
     !isLeaving &&
+      !pollingConflictError &&
       room.status !== 'FINISHED' &&
       room.status !== 'COMPLETED' &&
       room.status !== 'INTERRUPTED' &&
@@ -210,30 +228,73 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
       !isLeaving
     ) {
       nextRoundRequested.current = true;
-      console.log(`[GAME:HOST] Round ${room.roundNumber}/${room.totalRounds} reveal active. Advancing in 2.6s...`);
+      console.log(`[GAME:HOST] Round ${room.roundNumber}/${room.totalRounds} reveal active. Advancing...`);
 
-      const delay = isPredictionRound ? 3000 : 2500;
-      const timer = setTimeout(async () => {
+      const revealDelay = isPredictionRound ? 3000 : 2500;
+      const retryDelay = Math.min(1000 * Math.pow(2, Math.max(0, autoAdvanceAttempt - 1)), 5000);
+      const delay = autoAdvanceAttempt === 0 ? revealDelay : retryDelay;
+      let cancelled = false;
+
+      const timer = window.setTimeout(async () => {
         try {
-          const res = await api.nextRound(session.roomCode, session.playerId);
+          const res = await api.nextRound(session.roomCode, session.playerId, session.sessionId);
+          if (cancelled) return;
+
+          if (!res.error && res.room) {
+            setAutoAdvanceAttempt(0);
+            setAutoAdvanceNotice(null);
+            setRoom(res.room);
+            return;
+          }
+
           if (res.room) {
             setRoom(res.room);
           }
+
+          const retryable = res.status === 0 || res.status === 408 || res.status === 429 || (res.status !== undefined && res.status >= 500);
+          console.warn(`[GAME:HOST] Failed to advance round: ${res.error || 'Unknown error'}`);
+
+          if (retryable) {
+            nextRoundRequested.current = false;
+            setAutoAdvanceNotice('Syncing next round...');
+            setAutoAdvanceAttempt((attempt) => attempt + 1);
+            return;
+          }
+
+          setAutoAdvanceNotice(res.error || 'Could not advance round.');
         } catch (err) {
+          if (cancelled) return;
           console.error('[GAME:HOST] Failed to advance round:', err);
           nextRoundRequested.current = false;
+          setAutoAdvanceNotice('Syncing next round...');
+          setAutoAdvanceAttempt((attempt) => attempt + 1);
         }
       }, delay);
 
-      return () => clearTimeout(timer);
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timer);
+      };
     }
-  }, [room.status, room.roundNumber, room.totalRounds, isPredictionRound, session.role, session.roomCode, session.playerId, isLeaving]);
+  }, [
+    room.status,
+    room.roundNumber,
+    room.totalRounds,
+    isPredictionRound,
+    session.role,
+    session.roomCode,
+    session.playerId,
+    session.sessionId,
+    isLeaving,
+    autoAdvanceAttempt,
+  ]);
 
   async function handleOptionClick(choice: string) {
-    if (room.status !== 'PLAYING' || !room.currentQuestion || isLeaving) return;
+    if (room.status !== 'PLAYING' || !room.currentQuestion || isLeaving || answerSubmitInFlight.current) return;
 
     // In Prediction rounds: Step 1 = Predict opponent choice
     if (isPredictionRound && myPrediction === null) {
+      setAnswerSubmitError(null);
       setMyPrediction(choice);
       console.log(`[GAME] Predicted for ${opponentName}: "${choice}"`);
       return;
@@ -241,7 +302,11 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
 
     // Step 2 (or normal rounds): Select own choice
     if (myChoice !== null) return;
+    const submittedRound = room.roundNumber;
+    answerSubmitInFlight.current = true;
     setMyChoice(choice);
+    setIsSubmittingAnswer(true);
+    setAnswerSubmitError(null);
     console.log(`[GAME] Selected own: "${choice}" (Prediction: "${myPrediction || 'none'}")`);
 
     try {
@@ -251,26 +316,40 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
         session.role,
         room.roundNumber,
         choice,
-        myPrediction ?? undefined
+        myPrediction ?? undefined,
+        session.sessionId
       );
+
+      if (res.room) {
+        applyRoomUpdate(res.room);
+      }
 
       if (res.error) {
         console.warn(`[GAME] Submit answer notice:`, res.error);
+        setAnswerSubmitError(res.error);
+        const canRetryCurrentRound =
+          !res.room || (res.room.status === 'PLAYING' && res.room.roundNumber === submittedRound);
+        if (canRetryCurrentRound) {
+          setMyChoice((current) => (current === choice ? null : current));
+        }
+        return;
       }
 
-      if (res.room) {
-        setRoom((prev) => {
-          if (!prev) return res.room!;
-          const prevVer = prev.stateVersion || 0;
-          const newVer = res.room!.stateVersion || 0;
-          if (newVer > prevVer || (newVer === prevVer && res.room!.updatedAt >= prev.updatedAt)) {
-            return res.room!;
-          }
-          return prev;
-        });
+      if (!res.room) {
+        console.warn('[GAME] Submit answer response did not include room state.');
+        setAnswerSubmitError('Answer was not confirmed. Please try again.');
+        setMyChoice((current) => (current === choice ? null : current));
+        return;
       }
+
+      setAnswerSubmitError(null);
     } catch (err) {
       console.error('[GAME] Network error on answer submit:', err);
+      setAnswerSubmitError('Cannot submit your answer. Check your connection and try again.');
+      setMyChoice((current) => (current === choice ? null : current));
+    } finally {
+      answerSubmitInFlight.current = false;
+      setIsSubmittingAnswer(false);
     }
   }
 
@@ -283,7 +362,7 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
     setIsLeaving(true);
     try {
       console.log(`[GAME] Player confirmed leave for room ${session.roomCode}. Requesting authoritative leave from server...`);
-      const res = await api.leaveRoom(session.roomCode, session.playerId);
+      const res = await api.leaveRoom(session.roomCode, session.playerId, session.sessionId);
       if (res.room) {
         onGameFinish(res.room);
         return;
@@ -307,11 +386,14 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
   const q = room.currentQuestion;
   const hasAnswered = myChoice !== null;
   const isRevealing = room.status === 'REVEALING';
+  const isGeneratingReport = room.status === 'GENERATING_REPORT';
   const isMismatchPreReveal = isRevealing && room.lastResult === 'NO_MATCH' && !showRevealOverlay;
 
   // Dynamic Prompt based on prediction step
   let promptText = 'PICK ONE — FAST!';
-  if (hasAnswered) {
+  if (isSubmittingAnswer) {
+    promptText = 'SENDING YOUR PICK...';
+  } else if (hasAnswered) {
     promptText = 'YOUR PICK IS LOCKED!';
   } else if (isPredictionRound) {
     if (myPrediction === null) {
@@ -446,6 +528,48 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
         </div>
       )}
 
+      {room.status === 'REVEALING' && session.role === 'host' && autoAdvanceNotice && (
+        <div className="synq-auto-advance-banner" role="status" aria-live="polite">
+          {autoAdvanceNotice}
+        </div>
+      )}
+
+      {room.status === 'PLAYING' && answerSubmitError && (
+        <div className="synq-answer-submit-banner" role="alert">
+          {answerSubmitError}
+        </div>
+      )}
+
+      {pollingConflictError && (
+        <div className="synq-session-conflict-overlay" role="alertdialog" aria-modal="true" aria-labelledby="session-conflict-title">
+          <div className="synq-session-conflict-card">
+            <div className="synq-session-conflict-title" id="session-conflict-title">
+              Game open in another tab
+            </div>
+            <p>{pollingConflictError}</p>
+            <div className="synq-session-conflict-actions">
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => setPollingConflictError(null)}
+              >
+                RETRY THIS TAB
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isGeneratingReport && (
+        <div className="synq-generating-report-screen" role="status" aria-live="polite">
+          <div className="synq-generating-report-card">
+            <div className="spinner" aria-hidden="true" />
+            <div className="synq-generating-report-title">Building your match report</div>
+            <p>Analyzing your answers, streaks, and biggest sync moments...</p>
+          </div>
+        </div>
+      )}
+
       {/* Main game area */}
       <main className="game-screen game-screen--split">
         {q ? (
@@ -454,13 +578,13 @@ export function Game({ session, initialRoom, onGameFinish }: GameProps) {
             optionB={q.optionB}
             roundLabel={`ROUND ${room.roundNumber} OF ${room.totalRounds}`}
             category={q.category}
-            prompt={hasAnswered ? 'LOCKED 🔒' : promptText}
+            prompt={promptText}
             scoreLabel={`${room.matches}/${room.total}`}
             roundBadgeLabel={roundBadge?.label}
             roundBadgeVariant={roundBadge?.variant}
             scenario={q.scenario}
             selectedChoice={myChoice}
-            disabled={hasAnswered || isRevealing}
+            disabled={hasAnswered || isRevealing || isSubmittingAnswer || isGeneratingReport}
             dimUnselected={hasAnswered}
             revealChoices={mismatchRevealChoices}
             myRevealChoice={isMismatchPreReveal ? myRevealChoice : null}

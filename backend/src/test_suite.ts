@@ -4,7 +4,18 @@
 
 import { generateQuestion, generateFinalReport, computeCategoryScores, computeAchievements, computePredictionScore, generateLiveReaction } from './questionService';
 import { getFallbackQuestion, getRoundTypeForRound, getRoundConfiguration, FALLBACK_QUESTIONS, isDuplicateQuestion, normalizeSignature, getTotalQuestionCount } from './fallbackQuestions';
-import { setRoom, getRoom, deleteRoom, setPlayerAnswer, getRoundAnswers, clearRoundAnswers } from './store';
+import {
+  setRoom,
+  getRoom,
+  deleteRoom,
+  setPlayerAnswer,
+  getRoundAnswers,
+  clearRoundAnswers,
+  saveGameResult,
+  getGameResult,
+  cleanupExpiredGameResults,
+} from './store';
+import { checkRateLimit, cleanupTransientPresenceState, handleExplicitDisconnect, handleVoluntaryLeave, registerPlayerPresence } from './presenceService';
 import { Room, RoundHistoryItem, Question } from './types';
 import questionsData from './dataset/questionsData.json';
 
@@ -174,9 +185,11 @@ async function runTests() {
     hostPlayerId: 'h1',
     hostPlayerName: 'HostPlayer',
     hostLastSeenAt: Date.now(),
+    hostSessionId: 'host_session',
     guestPlayerId: 'g1',
     guestPlayerName: 'GuestPlayer',
     guestLastSeenAt: Date.now(),
+    guestSessionId: 'guest_session',
     deepPsychology: false,
     status: 'PLAYING',
     roundNumber: 5,
@@ -209,8 +222,72 @@ async function runTests() {
   const retrieved = getRoom(roomCode);
   assert(retrieved !== undefined && retrieved.code === roomCode, 'Room stored and retrieved successfully');
 
+  const invalidLeave = await handleVoluntaryLeave(roomCode, 'intruder');
+  assert(!invalidLeave.success && invalidLeave.error === 'Player identity mismatch.', 'Unknown player cannot voluntarily leave or forfeit a room');
+  assert(getRoom(roomCode)?.status === 'PLAYING', 'Unknown player leave attempt does not mutate room state');
+
+  const invalidDisconnect = handleExplicitDisconnect(roomCode, 'intruder', 'host_session');
+  assert(!invalidDisconnect.success, 'Unknown player cannot disconnect a room');
+  const wrongSessionDisconnect = handleExplicitDisconnect(roomCode, 'h1', 'wrong_session');
+  assert(!wrongSessionDisconnect.success, 'Wrong session cannot disconnect a valid player');
+  assert(getRoom(roomCode)?.status === 'PLAYING', 'Invalid disconnect attempts do not mutate room state');
+
+  const firstAnswerWrite = setPlayerAnswer(roomCode, 5, 'host', {
+    playerId: 'h1',
+    roundNumber: 5,
+    choice: 'Pizza',
+    prediction: 'Pizza',
+    answeredAt: Date.now(),
+  });
+  assert(firstAnswerWrite === 'created', 'First answer write is accepted');
+
+  const duplicateAnswerWrite = setPlayerAnswer(roomCode, 5, 'host', {
+    playerId: 'h1',
+    roundNumber: 5,
+    choice: 'Pizza',
+    prediction: 'Pizza',
+    answeredAt: Date.now(),
+  });
+  assert(duplicateAnswerWrite === 'duplicate', 'Identical answer retry is treated as idempotent duplicate');
+
+  const conflictingAnswerWrite = setPlayerAnswer(roomCode, 5, 'host', {
+    playerId: 'h1',
+    roundNumber: 5,
+    choice: 'Burgers',
+    prediction: 'Pizza',
+    answeredAt: Date.now(),
+  });
+  assert(conflictingAnswerWrite === 'conflict', 'Changed answer retry is rejected as conflict');
+  assert(getRoundAnswers(roomCode, 5).host?.choice === 'Pizza', 'Conflicting answer does not overwrite locked answer');
+
+  clearRoundAnswers(roomCode, 5);
   deleteRoom(roomCode);
   assert(getRoom(roomCode) === undefined, 'Room cleaned up successfully');
+
+  saveGameResult({
+    gameId: 'TEST_GAME_OLD',
+    roomCode: 'OLD1',
+    player1Id: 'p1',
+    player2Id: 'p2',
+    winnerId: null,
+    loserId: null,
+    winnerName: null,
+    loserName: null,
+    resultType: 'NORMAL',
+    completionReason: 'NORMAL_COMPLETION',
+    completedAt: Date.now() - 10_000,
+    finalReport: funReport,
+  });
+  assert(getGameResult('OLD1') !== undefined, 'Completed game result can be retrieved before cleanup');
+  const removedResultKeys = cleanupExpiredGameResults(Date.now(), 1_000);
+  assert(removedResultKeys >= 2, 'Expired completed game result keys are removed');
+  assert(getGameResult('OLD1') === undefined && getGameResult('TEST_GAME_OLD') === undefined, 'Expired game result is no longer retrievable');
+
+  registerPlayerPresence('GONE', 'p1', 's1', 'OldPlayer', 'host', 'ip_hash');
+  checkRateLimit('expired_test_limit', 1, 1);
+  const transientCleanup = cleanupTransientPresenceState(Date.now() + 2);
+  assert(transientCleanup.removedPresences >= 1, 'Orphaned presence records are cleaned up');
+  assert(transientCleanup.removedRateLimits >= 1, 'Expired rate limit records are cleaned up');
 
   console.log('\n============================================================');
   console.log(`⚡ AUDIT COMPLETE: ${passed} PASSED, ${failed} FAILED`);

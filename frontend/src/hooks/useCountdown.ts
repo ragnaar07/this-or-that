@@ -3,7 +3,9 @@
 // Dynamic timeLimit (10s for QUICK, 16s for SITUATIONAL)
 // ============================================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+
+const COUNTDOWN_PROGRESS_INTERVAL_MS = 100;
 
 export function useCountdown(
   deadline: number | null,
@@ -16,14 +18,16 @@ export function useCountdown(
 } {
   const [secondsLeft, setSecondsLeft] = useState(timeLimit);
   const [progress, setProgress] = useState(1);
-  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (deadline === null) {
-      setSecondsLeft(timeLimit);
-      setProgress(1);
+      setSecondsLeft((prev) => (prev === timeLimit ? prev : timeLimit));
+      setProgress((prev) => (prev === 1 ? prev : 1));
       return;
     }
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let lastSecondsLeft: number | null = null;
 
     const tick = () => {
       const now = Date.now();
@@ -31,16 +35,23 @@ export function useCountdown(
       const secs = Math.ceil(remaining / 1000);
       const prog = Math.min(1, Math.max(0, remaining / (timeLimit * 1000)));
 
-      setSecondsLeft(secs);
-      setProgress(prog);
+      if (secs !== lastSecondsLeft) {
+        lastSecondsLeft = secs;
+        setSecondsLeft(secs);
+      }
+      setProgress((prev) => (Math.abs(prev - prog) < 0.005 ? prev : prog));
 
       if (remaining > 0) {
-        rafRef.current = requestAnimationFrame(tick);
+        timeoutId = window.setTimeout(tick, COUNTDOWN_PROGRESS_INTERVAL_MS);
       }
     };
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    tick();
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [deadline, timeLimit]);
 
   return {

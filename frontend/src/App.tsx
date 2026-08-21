@@ -32,7 +32,12 @@ export default function App() {
               setRoomState(res.room);
               if (res.room.status === 'WAITING') {
                 setScreen('LOBBY');
-              } else if (res.room.status === 'PLAYING' || res.room.status === 'REVEALING' || res.room.status === 'PLAYER_DISCONNECTED') {
+              } else if (
+                res.room.status === 'PLAYING' ||
+                res.room.status === 'REVEALING' ||
+                res.room.status === 'GENERATING_REPORT' ||
+                res.room.status === 'PLAYER_DISCONNECTED'
+              ) {
                 setScreen('GAME');
               } else if (res.room.status === 'FINISHED' || res.room.status === 'COMPLETED' || res.room.status === 'INTERRUPTED' || res.room.status === 'ABANDONED') {
                 setScreen('RESULT');

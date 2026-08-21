@@ -20,6 +20,7 @@ import {
   getAllRooms,
   getGameResult,
   saveGameResult,
+  cleanupExpiredGameResults,
 } from './store';
 import {
   getIpHash,
@@ -27,43 +28,64 @@ import {
   checkRateLimit,
   registerPlayerPresence,
   handleHeartbeat,
+  HEARTBEAT_INTERVAL_MS,
   handlePlayerReconnect,
   handleExplicitDisconnect,
   handleVoluntaryLeave,
   finalizeGameResult,
   checkInactivityAndFinalize,
+  cleanupTransientPresenceState,
 } from './presenceService';
-import { Room, Answer, RoundHistoryItem, RoundType, QuestionType, QuestionFormat } from './types';
+import { Room, Answer, RoundHistoryItem, RoundType, QuestionType, QuestionFormat, Question, FinalReport } from './types';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const DEFAULT_TOTAL_ROUNDS = 20;
+const PREFETCHED_QUESTION_TTL_MS = 10 * 60_000;
+
+interface PrefetchedNextQuestion {
+  roomCode: string;
+  revealStateVersion: number;
+  createdAt: number;
+  promise: Promise<Question>;
+}
+
+const prefetchedNextQuestions = new Map<string, PrefetchedNextQuestion>();
+const finalReportGenerations = new Set<string>();
 
 // ---- Middleware ----
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  process.env.ALLOWED_ORIGIN,
+  ...(process.env.ALLOWED_ORIGIN || '').split(','),
   'http://localhost:5173',
   'http://localhost:5000',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5000',
-].filter(Boolean) as string[];
+]
+  .map(origin => origin?.trim().replace(/\/$/, ''))
+  .filter(Boolean) as string[];
+
+function isAllowedCorsOrigin(origin: string): boolean {
+  if (process.env.NODE_ENV !== 'production') return true;
+  if (allowedOrigins.includes('*')) return true;
+
+  const normalizedOrigin = origin.replace(/\/$/, '');
+  return (
+    allowedOrigins.includes(normalizedOrigin) ||
+    normalizedOrigin.endsWith('.vercel.app') ||
+    normalizedOrigin.endsWith('.onrender.com') ||
+    normalizedOrigin.endsWith('.pages.dev')
+  );
+}
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (
-      allowedOrigins.includes('*') ||
-      allowedOrigins.some(a => a && origin.startsWith(a.replace(/\/$/, ''))) ||
-      origin.endsWith('.vercel.app') ||
-      origin.endsWith('.onrender.com') ||
-      origin.endsWith('.pages.dev') ||
-      process.env.NODE_ENV !== 'production'
-    ) {
+    if (isAllowedCorsOrigin(origin)) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -95,10 +117,13 @@ app.get('/api/health', (_req: Request, res: Response) => {
 app.get('/api/stats', (_req: Request, res: Response) => {
   visitorCount += 1;
   res.json({
-    visitorCount,
-    totalMatchesSynced: Math.floor(visitorCount * 1.6) + 420,
-    activeRooms: getAllRooms().size,
-    timestamp: Date.now(),
+    success: true,
+    data: {
+      visitorCount,
+      totalMatchesSynced: Math.floor(visitorCount * 1.6) + 420,
+      activeRooms: getAllRooms().size,
+      timestamp: Date.now(),
+    },
   });
 });
 
@@ -431,9 +456,15 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'ROOM NOT FOUND.' });
     }
 
-    // 1. Update presence heartbeat if playerId supplied
+    // 1. Polling is the gameplay presence signal; throttle writes to heartbeat cadence.
     if (playerId) {
-      handleHeartbeat(code, playerId, sessionId);
+      const heartbeat = handleHeartbeat(code, playerId, sessionId, HEARTBEAT_INTERVAL_MS);
+      if (!heartbeat.success) {
+        return res.status(heartbeat.error === 'Game already open in another tab.' ? 409 : 404).json({
+          error: heartbeat.error || 'Could not update heartbeat.',
+          room: heartbeat.room ? sanitizeRoom(heartbeat.room) : undefined,
+        });
+      }
     }
 
     const now = Date.now();
@@ -461,7 +492,7 @@ app.get('/api/rooms/:code', async (req: Request, res: Response) => {
 app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
-    const { playerId, role, roundNumber, choice, prediction } = req.body ?? {};
+    const { playerId, role, roundNumber, choice, prediction, sessionId } = req.body ?? {};
 
     if (!isValidRoomCode(code)) {
       return res.status(400).json({ error: 'Invalid room code.' });
@@ -472,22 +503,24 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'ROOM NOT FOUND.' });
     }
 
-    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED' || room.status === 'COMPLETED') {
+    if (room.status === 'FINISHED' || room.status === 'INTERRUPTED' || room.status === 'COMPLETED' || room.status === 'ABANDONED') {
       return res.status(409).json({ error: 'Game has already ended.', room: sanitizeRoom(room) });
     }
 
     if (role !== 'host' && role !== 'guest') {
       return res.status(400).json({ error: 'Invalid role.' });
     }
+    const playerRole = role as 'host' | 'guest';
 
-    const expectedId = role === 'host' ? room.hostPlayerId : room.guestPlayerId;
+    const expectedId = playerRole === 'host' ? room.hostPlayerId : room.guestPlayerId;
     if (playerId !== expectedId) {
       return res.status(403).json({ error: 'Player identity mismatch.' });
     }
 
-    const now = Date.now();
-    if (role === 'host') room.hostLastSeenAt = now;
-    if (role === 'guest') room.guestLastSeenAt = now;
+    const sessionCheck = validatePlayerSession(room, playerRole, sessionId);
+    if (!sessionCheck.success) {
+      return res.status(sessionCheck.status).json({ error: sessionCheck.error, room: sanitizeRoom(room) });
+    }
 
     if (typeof roundNumber !== 'number' || roundNumber !== room.roundNumber) {
       return res.status(409).json({ error: 'Round number mismatch.' });
@@ -497,6 +530,7 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid choice.' });
     }
 
+    const now = Date.now();
     const trimmedChoice = choice.trim();
     const trimmedPrediction = typeof prediction === 'string' && prediction.trim().length > 0
       ? prediction.trim()
@@ -510,7 +544,34 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
       answeredAt: now,
     };
 
-    setPlayerAnswer(code, roundNumber, role, answer);
+    const existingAnswers = getRoundAnswers(code, roundNumber);
+    const existingAnswer = existingAnswers[playerRole];
+
+    if (room.status !== 'PLAYING') {
+      const isDuplicateRetry =
+        existingAnswer?.choice === answer.choice &&
+        existingAnswer?.prediction === answer.prediction;
+
+      return res.status(isDuplicateRetry ? 200 : 409).json({
+        success: isDuplicateRetry,
+        error: isDuplicateRetry ? undefined : 'This round is no longer accepting answers.',
+        room: sanitizeRoom(room),
+      });
+    }
+
+    if (playerRole === 'host') room.hostLastSeenAt = now;
+    if (playerRole === 'guest') room.guestLastSeenAt = now;
+
+    const answerWriteResult = setPlayerAnswer(code, roundNumber, playerRole, answer);
+    if (answerWriteResult === 'conflict') {
+      return res.status(409).json({
+        error: 'Answer already locked for this round.',
+        room: sanitizeRoom(room),
+      });
+    }
+    if (answerWriteResult === 'duplicate') {
+      return res.json({ success: true, room: sanitizeRoom(room) });
+    }
 
     const roundAnswers = getRoundAnswers(code, roundNumber);
     const hostChoice = roundAnswers.host?.choice ?? null;
@@ -545,7 +606,7 @@ app.post('/api/rooms/:code/answer', (req: Request, res: Response) => {
 app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
-    const { playerId } = req.body ?? {};
+    const { playerId, sessionId } = req.body ?? {};
 
     const room = getRoom(code);
     if (!room) {
@@ -556,32 +617,25 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Only the host can advance rounds.' });
     }
 
+    const sessionCheck = validatePlayerSession(room, 'host', sessionId);
+    if (!sessionCheck.success) {
+      return res.status(sessionCheck.status).json({ error: sessionCheck.error, room: sanitizeRoom(room) });
+    }
+
     if (room.status !== 'REVEALING') {
       return res.json({ success: true, room: sanitizeRoom(room) });
     }
 
     // Check if game complete
     if (room.roundNumber >= room.totalRounds) {
-      console.log(`[GAME COMPLETE] Room ${code} completed all ${room.totalRounds} rounds! Generating AI analysis...`);
-      await finishGame(room);
-      const finished = getRoom(code)!;
-      return res.json({ success: true, room: sanitizeRoom(finished) });
+      console.log(`[GAME COMPLETE] Room ${code} completed all ${room.totalRounds} rounds! Starting final report generation...`);
+      const generatingRoom = startFinalReportGeneration(room);
+      return res.json({ success: true, room: sanitizeRoom(generatingRoom) });
     }
 
     const nextRound = room.roundNumber + 1;
     const nextRoundType = getRoundTypeForRound(nextRound, room.deepPsychology !== false);
-    const question = await generateQuestion(
-      room.recentQuestions,
-      room.recentCategories || [],
-      nextRound,
-      nextRoundType,
-      room.gameMode,
-      room.hostPlayerName,
-      room.guestPlayerName || 'Player 2',
-      room.hostGender || 'other',
-      room.guestGender || 'other',
-      room.deepPsychology !== false
-    );
+    const question = await getNextRoundQuestion(room, nextRound, nextRoundType);
     const now = Date.now();
     const timeLimit = question.timeLimit || (question.format === 'QUICK' ? 10 : 16);
     const durationMs = timeLimit * 1000;
@@ -620,7 +674,7 @@ app.post('/api/rooms/:code/next-round', async (req: Request, res: Response) => {
 app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
-    const { playerId } = req.body ?? {};
+    const { playerId, sessionId } = req.body ?? {};
 
     const room = getRoom(code);
     if (!room) {
@@ -629,6 +683,16 @@ app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
 
     if (playerId !== room.hostPlayerId && playerId !== room.guestPlayerId) {
       return res.status(403).json({ error: 'Only players in this room can restart the game.' });
+    }
+
+    const playerRole = playerId === room.hostPlayerId ? 'host' : 'guest';
+    const sessionCheck = validatePlayerSession(room, playerRole, sessionId);
+    if (!sessionCheck.success) {
+      return res.status(sessionCheck.status).json({ error: sessionCheck.error, room: sanitizeRoom(room) });
+    }
+
+    if (room.status === 'GENERATING_REPORT') {
+      return res.status(409).json({ error: 'Final report is still being generated.', room: sanitizeRoom(room) });
     }
 
     clearAllRoomAnswers(code);
@@ -743,15 +807,25 @@ app.post('/api/rooms/:code/restart', async (req: Request, res: Response) => {
 async function handleLeaveRoom(req: Request, res: Response) {
   try {
     const code = String(req.params.code || '').toUpperCase().trim();
-    const { playerId } = req.body ?? {};
+    const { playerId, sessionId } = req.body ?? {};
 
     const room = getRoom(code);
     if (!room) {
       return res.json({ success: true });
     }
 
+    if (playerId !== room.hostPlayerId && playerId !== room.guestPlayerId) {
+      return res.status(403).json({ error: 'Player identity mismatch.' });
+    }
+
+    const playerRole = playerId === room.hostPlayerId ? 'host' : 'guest';
+    const sessionCheck = validatePlayerSession(room, playerRole, sessionId);
+    if (!sessionCheck.success) {
+      return res.status(sessionCheck.status).json({ error: sessionCheck.error, room: sanitizeRoom(room) });
+    }
+
     // 1. Idempotent check: if already finished, return finished room
-    if (room.status === 'FINISHED' || room.status === 'COMPLETED') {
+    if (room.status === 'FINISHED' || room.status === 'COMPLETED' || room.status === 'GENERATING_REPORT') {
       return res.json({ success: true, room: sanitizeRoom(room) });
     }
 
@@ -792,6 +866,11 @@ async function handleLeaveRoom(req: Request, res: Response) {
 
     // 4. Active game leave (PLAYING, REVEALING, or PLAYER_DISCONNECTED) -> Immediate forfeit award
     const result = await handleVoluntaryLeave(code, playerId);
+    if (!result.success) {
+      return res.status(result.error === 'Player identity mismatch.' ? 403 : 404).json({
+        error: result.error || 'Could not leave room.',
+      });
+    }
     return res.json({ success: true, room: result.room ? sanitizeRoom(result.room) : undefined });
   } catch (err) {
     console.error('[handleLeaveRoom] Error:', err);
@@ -801,6 +880,110 @@ async function handleLeaveRoom(req: Request, res: Response) {
 
 app.delete('/api/rooms/:code/leave', handleLeaveRoom);
 app.post('/api/rooms/:code/leave', handleLeaveRoom);
+
+// ============================================================
+// Internal: Mutation Session Authorization
+// ============================================================
+function validatePlayerSession(
+  room: Room,
+  role: 'host' | 'guest',
+  sessionId: unknown
+): { success: true } | { success: false; status: number; error: string } {
+  const suppliedSessionId = typeof sessionId === 'string' ? sessionId.trim() : '';
+  if (!suppliedSessionId) {
+    return { success: false, status: 400, error: 'Missing sessionId.' };
+  }
+
+  const expectedSessionId = role === 'host' ? room.hostSessionId : room.guestSessionId;
+  if (!expectedSessionId || expectedSessionId !== suppliedSessionId) {
+    return { success: false, status: 403, error: 'Player session mismatch.' };
+  }
+
+  return { success: true };
+}
+
+// ============================================================
+// Internal: Next-Round Question Prefetch
+// ============================================================
+function nextQuestionPrefetchKey(room: Room, nextRound: number): string {
+  return `${room.code.toUpperCase()}::${nextRound}::${room.stateVersion || 1}`;
+}
+
+function generateNextRoundQuestion(room: Room, nextRound: number, nextRoundType: RoundType): Promise<Question> {
+  return generateQuestion(
+    room.recentQuestions,
+    room.recentCategories || [],
+    nextRound,
+    nextRoundType,
+    room.gameMode,
+    room.hostPlayerName,
+    room.guestPlayerName || 'Player 2',
+    room.hostGender || 'other',
+    room.guestGender || 'other',
+    room.deepPsychology !== false
+  );
+}
+
+function prefetchNextRoundQuestion(room: Room): void {
+  if (room.roundNumber >= room.totalRounds) return;
+
+  const nextRound = room.roundNumber + 1;
+  const key = nextQuestionPrefetchKey(room, nextRound);
+  if (prefetchedNextQuestions.has(key)) return;
+
+  const nextRoundType = getRoundTypeForRound(nextRound, room.deepPsychology !== false);
+  const promise = generateNextRoundQuestion(room, nextRound, nextRoundType);
+  const entry: PrefetchedNextQuestion = {
+    roomCode: room.code.toUpperCase(),
+    revealStateVersion: room.stateVersion || 1,
+    createdAt: Date.now(),
+    promise,
+  };
+
+  prefetchedNextQuestions.set(key, entry);
+  promise.catch((err) => {
+    if (prefetchedNextQuestions.get(key) === entry) {
+      prefetchedNextQuestions.delete(key);
+    }
+    console.warn(`[QUESTION PREFETCH] Room ${room.code} R${nextRound} failed:`, err);
+  });
+}
+
+async function getNextRoundQuestion(room: Room, nextRound: number, nextRoundType: RoundType): Promise<Question> {
+  const key = nextQuestionPrefetchKey(room, nextRound);
+  const prefetched = prefetchedNextQuestions.get(key);
+
+  if (prefetched) {
+    prefetchedNextQuestions.delete(key);
+    try {
+      return await prefetched.promise;
+    } catch {
+      return generateNextRoundQuestion(room, nextRound, nextRoundType);
+    }
+  }
+
+  return generateNextRoundQuestion(room, nextRound, nextRoundType);
+}
+
+function cleanupPrefetchedNextQuestions(now = Date.now()): number {
+  let removed = 0;
+
+  for (const [key, entry] of prefetchedNextQuestions.entries()) {
+    const room = getRoom(entry.roomCode);
+    const isExpired = now - entry.createdAt > PREFETCHED_QUESTION_TTL_MS;
+    const isStale =
+      !room ||
+      room.stateVersion !== entry.revealStateVersion ||
+      (room.status !== 'REVEALING' && room.status !== 'PLAYING');
+
+    if (isExpired || isStale) {
+      prefetchedNextQuestions.delete(key);
+      removed++;
+    }
+  }
+
+  return removed;
+}
 
 // ============================================================
 // Internal: Synchronous Round Evaluation
@@ -904,45 +1087,133 @@ function resolveRound(code: string): Room | null {
   console.log(`[EVALUATION] Room ${code} R${current.roundNumber} (${roundType}): ${updated.lastResult} | Reaction: "${liveReaction}" | Score: ${newScore}`);
 
   setRoom(updated);
+  prefetchNextRoundQuestion(updated);
   return updated;
 }
 
 // ============================================================
 // Internal: Finish Game & Generate AI Analysis
 // ============================================================
+function buildFallbackFinalReport(room: Room, generatedAt = Date.now()): FinalReport {
+  const matchPercentage = room.total > 0 ? Math.round((room.matches / room.total) * 100) : 0;
+
+  return {
+    headline: '⚡ MATCH REPORT READY',
+    overallVibe: 'Report generated with core match stats.',
+    matchPercentage,
+    completedQuestions: room.total,
+    totalQuestions: room.totalRounds,
+    totalScore: room.score,
+    maxPossibleScore: room.totalRounds,
+    strongestMatches: room.history
+      .filter((item) => item.result === 'MATCH')
+      .slice(-3)
+      .map((item) => item.question),
+    biggestDifferences: room.history
+      .filter((item) => item.result === 'NO_MATCH')
+      .slice(-3)
+      .map((item) => item.question),
+    funniestDifference: '',
+    mostUnexpectedMatch: '',
+    sharedTendencies: [],
+    conversationStarters: [],
+    finalVerdict: `You matched on ${room.matches} of ${room.total} completed rounds.`,
+    isPartial: false,
+    player1Gender: room.hostGender || 'other',
+    player2Gender: room.guestGender || 'other',
+    resultType: 'NORMAL',
+    completionReason: 'NORMAL_COMPLETION',
+    gameMode: room.gameMode,
+    aiTone: room.aiTone,
+    generatedAt,
+  };
+}
+
+function startFinalReportGeneration(room: Room): Room {
+  const code = room.code.toUpperCase();
+  const latest = getRoom(code) || room;
+
+  if (latest.status === 'FINISHED' || latest.status === 'COMPLETED' || latest.status === 'INTERRUPTED' || latest.status === 'ABANDONED') {
+    return latest;
+  }
+
+  if (latest.status === 'GENERATING_REPORT') {
+    return latest;
+  }
+
+  const generatingRoom: Room = {
+    ...latest,
+    status: 'GENERATING_REPORT',
+    roundDeadline: null,
+    stateVersion: (latest.stateVersion || 1) + 1,
+    updatedAt: Date.now(),
+  };
+
+  setRoom(generatingRoom);
+
+  if (!finalReportGenerations.has(code)) {
+    finalReportGenerations.add(code);
+    setTimeout(() => {
+      void finishGame(generatingRoom)
+        .catch((err) => {
+          console.error(`[FINAL REPORT TASK ERROR] Room ${code}:`, err);
+        })
+        .finally(() => {
+          finalReportGenerations.delete(code);
+        });
+    }, 0);
+  }
+
+  return getRoom(code) || generatingRoom;
+}
+
 async function finishGame(room: Room): Promise<void> {
   const code = room.code;
   console.log(`[GENERATING FINAL REPORT] Room ${code}...`);
 
-  const report = await generateFinalReport(
-    room.history,
-    room.hostPlayerName,
-    room.guestPlayerName || 'Guest',
-    room.matches,
-    room.total,
-    room.totalRounds,
-    false,
-    undefined,
-    room.gameMode,
-    room.aiTone,
-    undefined,
-    undefined,
-    room.hostGender || 'other',
-    room.guestGender || 'other'
-  );
+  let report: FinalReport;
+  const now = Date.now();
+
+  try {
+    report = await generateFinalReport(
+      room.history,
+      room.hostPlayerName,
+      room.guestPlayerName || 'Guest',
+      room.matches,
+      room.total,
+      room.totalRounds,
+      false,
+      undefined,
+      room.gameMode,
+      room.aiTone,
+      undefined,
+      undefined,
+      room.hostGender || 'other',
+      room.guestGender || 'other'
+    );
+  } catch (err) {
+    console.error(`[FINAL REPORT GENERATION ERROR] Room ${code}:`, err);
+    report = buildFallbackFinalReport(room, now);
+  }
+
+  const latest = getRoom(code);
+  if (!latest || latest.status !== 'GENERATING_REPORT') {
+    console.warn(`[FINAL REPORT STALE] Room ${code}: Report finished after room moved away from GENERATING_REPORT.`);
+    return;
+  }
 
   const updated: Room = {
-    ...room,
+    ...latest,
     status: 'FINISHED',
     finalReport: report,
     resultType: 'NORMAL',
-    stateVersion: (room.stateVersion || 1) + 1,
+    completionReason: 'NORMAL_COMPLETION',
+    stateVersion: (latest.stateVersion || 1) + 1,
     updatedAt: Date.now(),
   };
 
   setRoom(updated);
 
-  const now = Date.now();
   saveGameResult({
     gameId: `${room.code}_${room.createdAt}`,
     roomCode: room.code,
@@ -1011,6 +1282,8 @@ async function interruptGame(
 setInterval(() => {
   const now = Date.now();
   const all = getAllRooms();
+  let removedRooms = 0;
+
   for (const [code, room] of all.entries()) {
     const isOld = now - room.createdAt > 3600_000;
     const isAbandoned =
@@ -1019,8 +1292,24 @@ setInterval(() => {
 
     if (isOld || isAbandoned) {
       deleteRoom(code);
-      console.log(`[CLEANUP] Deleted inactive room: ${code}`);
+      removedRooms++;
     }
+  }
+
+  const removedGameResultKeys = cleanupExpiredGameResults(now);
+  const { removedPresences, removedRateLimits } = cleanupTransientPresenceState(now);
+  const removedPrefetchedQuestions = cleanupPrefetchedNextQuestions(now);
+
+  if (
+    removedRooms > 0 ||
+    removedGameResultKeys > 0 ||
+    removedPresences > 0 ||
+    removedRateLimits > 0 ||
+    removedPrefetchedQuestions > 0
+  ) {
+    console.log(
+      `[CLEANUP] Removed rooms=${removedRooms}, gameResultKeys=${removedGameResultKeys}, presences=${removedPresences}, rateLimits=${removedRateLimits}, prefetchedQuestions=${removedPrefetchedQuestions}`
+    );
   }
 }, 300_000);
 

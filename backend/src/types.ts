@@ -24,7 +24,7 @@ export interface Question {
   tags?: string[];
 }
 
-export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'PLAYER_DISCONNECTED' | 'FINISHED' | 'COMPLETED' | 'INTERRUPTED' | 'ABANDONED';
+export type RoomStatus = 'WAITING' | 'PLAYING' | 'REVEALING' | 'GENERATING_REPORT' | 'PLAYER_DISCONNECTED' | 'FINISHED' | 'COMPLETED' | 'INTERRUPTED' | 'ABANDONED';
 export type ResultType = 'NORMAL' | 'WIN_BY_DEFAULT' | 'DRAW' | 'ABANDONED';
 export type CompletionReason = 'NORMAL_COMPLETION' | 'PLAYER_LEFT' | 'PLAYER_DISCONNECTED' | 'BOTH_DISCONNECTED' | 'TIMEOUT';
 

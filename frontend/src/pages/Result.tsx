@@ -16,6 +16,9 @@ interface AnimatedCompatibilityScoreProps {
   value: number;
 }
 
+const REMATCH_POLL_INTERVAL_MS = 800;
+const REMATCH_WATCH_WINDOW_MS = 60_000;
+
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
 }
@@ -123,25 +126,44 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [isCheckingRematch, setIsCheckingRematch] = useState(false);
+  const [isWatchingForRematch, setIsWatchingForRematch] = useState(true);
   const [revealStep, setRevealStep] = useState<number>(1); // 1 to 5
 
-  // Poll room on Result screen: if opponent restarts the game, transition both players immediately!
+  useEffect(() => {
+    setIsWatchingForRematch(true);
+    const timer = window.setTimeout(() => {
+      setIsWatchingForRematch(false);
+    }, REMATCH_WATCH_WINDOW_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [session.roomCode, session.playerId]);
+
+  // Poll room briefly on Result screen: if opponent restarts, transition both players immediately.
   const pollRoom = useCallback(async () => {
     try {
-      const res = await api.pollRoom(session.roomCode, session.playerId);
+      const res = await api.pollRoom(session.roomCode, session.playerId, session.sessionId);
+      if (res.error) {
+        if (res.status === 409) {
+          showToast(res.error);
+          setIsWatchingForRematch(false);
+        }
+        return;
+      }
+
       if (res.room && res.room.status === 'PLAYING' && res.room.roundNumber === 1 && !res.room.finalReport) {
         onPlayAgain(res.room);
       }
     } catch {}
-  }, [session.roomCode, session.playerId, onPlayAgain]);
+  }, [session.roomCode, session.playerId, session.sessionId, onPlayAgain]);
 
-  usePolling(pollRoom, 800, true);
+  usePolling(pollRoom, REMATCH_POLL_INTERVAL_MS, isWatchingForRematch && !isRestarting);
 
   async function handlePlayAgain() {
     if (isRestarting) return;
     setIsRestarting(true);
     try {
-      const res = await api.restartRoom(session.roomCode, session.playerId);
+      const res = await api.restartRoom(session.roomCode, session.playerId, session.sessionId);
       if (res.room) {
         onPlayAgain(res.room);
         return;
@@ -185,6 +207,25 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3200);
+  }
+
+  async function handleCheckRematch() {
+    if (isCheckingRematch || isRestarting) return;
+
+    setIsCheckingRematch(true);
+    try {
+      const res = await api.pollRoom(session.roomCode, session.playerId, session.sessionId);
+      if (res.room && res.room.status === 'PLAYING' && res.room.roundNumber === 1 && !res.room.finalReport) {
+        onPlayAgain(res.room);
+        return;
+      }
+      showToast(res.error || 'No rematch yet.');
+    } catch (err) {
+      console.error(err);
+      showToast('Could not check rematch. Try again.');
+    } finally {
+      setIsCheckingRematch(false);
+    }
   }
 
   async function handleShare() {
@@ -242,6 +283,21 @@ export function Result({ session, room, onPlayAgain, onGoHome }: ResultProps) {
       >
         {isRestarting ? '🔄 RESTARTING MATCH...' : '🔄 PLAY AGAIN (REMATCH)'}
       </button>
+
+      {isWatchingForRematch ? (
+        <div className="rematch-watch-status" aria-live="polite">
+          AUTO-CHECKING FOR REMATCH
+        </div>
+      ) : (
+        <button
+          className="btn btn--secondary"
+          onClick={handleCheckRematch}
+          disabled={isCheckingRematch || isRestarting}
+          id="check-rematch-btn"
+        >
+          {isCheckingRematch ? 'CHECKING...' : 'CHECK FOR REMATCH'}
+        </button>
+      )}
 
       <button
         className="btn btn--primary btn--share"

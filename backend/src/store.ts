@@ -64,7 +64,27 @@ export function getGameResult(roomCodeOrId: string): GameResultRecord | undefine
   return gameResults.get(roomCodeOrId.toUpperCase()) || gameResults.get(roomCodeOrId);
 }
 
+export function cleanupExpiredGameResults(now = Date.now(), ttlMs = 24 * 60 * 60_000): number {
+  const expiredKeys = new Set<string>();
+
+  for (const [key, record] of gameResults.entries()) {
+    if (now - record.completedAt > ttlMs) {
+      expiredKeys.add(key);
+      expiredKeys.add(record.roomCode.toUpperCase());
+      expiredKeys.add(record.gameId);
+    }
+  }
+
+  for (const key of expiredKeys) {
+    gameResults.delete(key);
+  }
+
+  return expiredKeys.size;
+}
+
 // ---- Answer CRUD ----
+
+export type AnswerWriteResult = 'created' | 'duplicate' | 'conflict';
 
 function answerKey(roomCode: string, roundNumber: number): string {
   return `${roomCode.toUpperCase()}::${roundNumber}`;
@@ -79,17 +99,21 @@ export function setPlayerAnswer(
   roundNumber: number,
   role: 'host' | 'guest',
   answer: Answer
-): boolean {
+): AnswerWriteResult {
   const key = answerKey(roomCode, roundNumber);
   const current = answers.get(key) ?? {};
 
-  // Idempotent: If player already submitted this exact choice, return true
-  if (current[role]) {
-    return current[role]?.choice === answer.choice;
+  const existing = current[role];
+  if (existing) {
+    const isSameAnswer =
+      existing.choice === answer.choice &&
+      existing.prediction === answer.prediction;
+
+    return isSameAnswer ? 'duplicate' : 'conflict';
   }
 
   answers.set(key, { ...current, [role]: answer });
-  return true;
+  return 'created';
 }
 
 export function clearRoundAnswers(roomCode: string, roundNumber: number): void {
@@ -104,4 +128,3 @@ export function clearAllRoomAnswers(roomCode: string): void {
     }
   }
 }
-

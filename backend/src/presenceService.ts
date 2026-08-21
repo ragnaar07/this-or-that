@@ -15,6 +15,7 @@ import {
 } from './types';
 import {
   getRoom,
+  getAllRooms,
   setRoom,
   tryAcquireFinalizeLock,
   releaseFinalizeLock,
@@ -27,6 +28,7 @@ import { generateFinalReport } from './questionService';
 export const HEARTBEAT_INTERVAL_MS = 6_000;
 export const INACTIVITY_TIMEOUT_MS = 12_000; // Time without heartbeat before marking DISCONNECTED
 export const GRACE_PERIOD_MS = 30_000;       // 30-second reconnection grace period
+export const PRESENCE_RETENTION_MS = 60 * 60_000;
 
 // In-memory presence map keyed by "roomCode::playerId"
 const presences = new Map<string, PlayerPresence>();
@@ -96,6 +98,34 @@ export function checkRateLimit(key: string, maxLimit: number = 30, windowMs: num
   return true;
 }
 
+export function cleanupTransientPresenceState(now = Date.now()): {
+  removedPresences: number;
+  removedRateLimits: number;
+} {
+  const activeRoomCodes = new Set(Array.from(getAllRooms().keys()).map(code => code.toUpperCase()));
+  let removedPresences = 0;
+  let removedRateLimits = 0;
+
+  for (const [key, presence] of presences.entries()) {
+    const roomIsGone = !activeRoomCodes.has(presence.roomCode.toUpperCase());
+    const isStale = now - presence.lastHeartbeat > PRESENCE_RETENTION_MS;
+
+    if (roomIsGone || isStale) {
+      presences.delete(key);
+      removedPresences++;
+    }
+  }
+
+  for (const [key, limit] of rateLimits.entries()) {
+    if (now > limit.resetAt) {
+      rateLimits.delete(key);
+      removedRateLimits++;
+    }
+  }
+
+  return { removedPresences, removedRateLimits };
+}
+
 // ---- Anti-Abuse: One Player Per IP Per Room ----
 
 export function checkSameRoomIpCollision(roomCode: string, ipHash: string): { allowed: boolean; error?: string } {
@@ -153,21 +183,38 @@ export function getPlayerPresence(roomCode: string, playerId: string): PlayerPre
 export function handleHeartbeat(
   roomCode: string,
   playerId: string,
-  sessionId: string
+  sessionId: string,
+  minUpdateIntervalMs = 0
 ): { success: boolean; room?: Room; error?: string } {
   const room = getRoom(roomCode);
   if (!room) {
     return { success: false, error: 'ROOM NOT FOUND.' };
   }
 
+  const isHost = room.hostPlayerId === playerId;
+  const isGuest = room.guestPlayerId === playerId;
+  if (!isHost && !isGuest) {
+    return { success: false, error: 'Player identity mismatch.' };
+  }
+
   const key = presenceKey(roomCode, playerId);
   const presence = presences.get(key);
+  const now = Date.now();
+  const expectedSessionId = isHost ? room.hostSessionId : room.guestSessionId;
+  if (!sessionId || !expectedSessionId || expectedSessionId !== sessionId) {
+    const isOtherActive = presence ? now - presence.lastHeartbeat < INACTIVITY_TIMEOUT_MS : false;
+    return {
+      success: false,
+      error: isOtherActive ? 'Game already open in another tab.' : 'Player session mismatch.',
+      room,
+    };
+  }
 
   if (presence) {
     // Validate session identity to prevent duplicate tab hijacking
     if (sessionId && presence.sessionId && presence.sessionId !== sessionId) {
       // Check if the other session is actively sending heartbeats
-      const isOtherActive = Date.now() - presence.lastHeartbeat < INACTIVITY_TIMEOUT_MS;
+      const isOtherActive = now - presence.lastHeartbeat < INACTIVITY_TIMEOUT_MS;
       if (isOtherActive) {
         return {
           success: false,
@@ -180,12 +227,21 @@ export function handleHeartbeat(
       }
     }
 
-    presence.lastHeartbeat = Date.now();
+    const shouldRecordHeartbeat =
+      minUpdateIntervalMs <= 0 ||
+      now - presence.lastHeartbeat >= minUpdateIntervalMs ||
+      presence.status !== 'CONNECTED' ||
+      room.status === 'PLAYER_DISCONNECTED';
+
+    if (!shouldRecordHeartbeat) {
+      return { success: true, room };
+    }
+
+    presence.lastHeartbeat = now;
     presence.status = 'CONNECTED';
     presence.disconnectStartedAt = null;
   }
 
-  const now = Date.now();
   if (playerId === room.hostPlayerId) {
     room.hostLastSeenAt = now;
   } else if (playerId === room.guestPlayerId) {
@@ -288,11 +344,22 @@ export function handleExplicitDisconnect(
   const room = getRoom(roomCode);
   if (!room) return { success: false };
 
+  const isHost = room.hostPlayerId === playerId;
+  const isGuest = room.guestPlayerId === playerId;
+  if (!isHost && !isGuest) {
+    return { success: false };
+  }
+
+  const expectedSessionId = isHost ? room.hostSessionId : room.guestSessionId;
+  if (!sessionId || !expectedSessionId || expectedSessionId !== sessionId) {
+    return { success: false };
+  }
+
   const key = presenceKey(roomCode, playerId);
   const presence = presences.get(key);
 
   if (presence) {
-    if (sessionId && presence.sessionId && presence.sessionId !== sessionId) {
+    if (presence.sessionId && presence.sessionId !== sessionId) {
       return { success: false }; // Different tab
     }
     presence.status = 'DISCONNECTED';
@@ -300,8 +367,6 @@ export function handleExplicitDisconnect(
   }
 
   const now = Date.now();
-  const isHost = room.hostPlayerId === playerId;
-  const isGuest = room.guestPlayerId === playerId;
 
   if (isHost) {
     room.hostLastSeenAt = 0; // mark immediately stale
@@ -335,6 +400,12 @@ export async function handleVoluntaryLeave(
     return { success: false, error: 'ROOM NOT FOUND.' };
   }
 
+  const isHost = room.hostPlayerId === playerId;
+  const isGuest = room.guestPlayerId === playerId;
+  if (!isHost && !isGuest) {
+    return { success: false, error: 'Player identity mismatch.' };
+  }
+
   if (room.status === 'FINISHED' || room.status === 'COMPLETED' || room.status === 'INTERRUPTED' || room.status === 'ABANDONED') {
     return { success: true, room };
   }
@@ -345,7 +416,6 @@ export async function handleVoluntaryLeave(
   }
 
   try {
-    const isHost = room.hostPlayerId === playerId;
     const leavingRole: 'host' | 'guest' = isHost ? 'host' : 'guest';
     const winningRole: 'host' | 'guest' = isHost ? 'guest' : 'host';
 
